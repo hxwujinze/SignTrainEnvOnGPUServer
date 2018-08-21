@@ -129,7 +129,7 @@ def train(model: nn.Module,
                     target_y = target_y.item()  # new style of get value in tensor
                     test_result_list.append((target_y, test_output))
 
-                test_result_output_func(test_result_list, epoch=epoch, loss=loss_val)
+                accuracy_res = test_result_output_func(test_result_list, epoch=epoch, loss=loss_val)
                 model.train()
                 model.cuda()
 
@@ -155,7 +155,7 @@ def train(model: nn.Module,
     info = 'data_set_size:%d\n' % len(data_set['train']) + \
            str(accuracy_res) + \
            'loss: %f\n' % loss_val + \
-           'Epoch: %d\n' % EPOCH
+           'Epoch: %d\n' % EPOCH + accuracy_res
     info += str(model)
 
     file.writelines(info)

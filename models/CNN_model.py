@@ -8,7 +8,7 @@ import torch.utils.data.dataloader as DataLoader
 
 
 LEARNING_RATE = 0.0001
-EPOCH = 200
+EPOCH = 160
 BATCH_SIZE = 32 
 WEIGHT_DECAY = 0.0000001
 
@@ -230,8 +230,9 @@ def test_result_output(result_list, epoch, loss):
 
     print("**************************************")
     print("epoch: %s\nloss: %s\nprogress: %.2f" %
-          (epoch, loss.data.float()[0], 100 * epoch / EPOCH,))
+          (epoch, loss, 100 * epoch / EPOCH,))
     print(accuracy_res)
+    return accuracy_res
 
 
 def output_len(Lin, padding, kernel_size, stride):

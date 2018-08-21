@@ -5,6 +5,7 @@ import pickle
 import random
 import shutil
 import time
+from multiprocessing import Pool
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -774,12 +775,18 @@ def cnn_recognize_test(online_data):
         verifier_cost_time = time.clock() - start_time
         print('time cost : cnn %f, verify %f' % (cnn_cost_time, verifier_cost_time))
 
-def generate_verify_vector(model_type):
+
+
+
+
+
+
+def generate_verify_vector():
     """
     根据所有训练数据生成reference vector 并保存至文件
     :return:
     """
-    print('generating verify vector (%s)...' % model_type)
+    print('generating verify vector ...'  )
     # load data 从训练数据中获取
     f = open(os.path.join(DATA_DIR_PATH, 'new_train_data'), 'r+b')
     raw_data = pickle.load(f)
@@ -790,39 +797,42 @@ def generate_verify_vector(model_type):
     #     raw_data = raw_data[1]
     # train_data => (batch_amount, data_set_emg)
     scaler = process_data.DataScaler(DATA_DIR_PATH)
-    print(raw_data[0])
 
     data_orderby_class = {}
     print('pre processing data')
     for (each_data, each_label) in raw_data:
-        if model_type == 'cnn':
-            each_data = scaler.normalize(each_data, 'cnn').T
+        each_data = scaler.normalize(each_data, 'cnn').T
         if data_orderby_class.get(each_label) is None:
             # 需要调整长度以及转置成时序
             data_orderby_class[each_label] = [each_data]
         else:
             data_orderby_class[each_label].append(each_data)
 
-    verifier = SiameseNetwork(train=False, model_type=model_type)
-    load_model_param(verifier, 'verify_model_' + model_type)
+    verifier = SiameseNetwork(train=False)
+    load_model_param(verifier, 'verify_model')
     verifier.double()
     verify_vectors = {}
     for each_sign in data_orderby_class.keys():
-        verify_vectors[each_sign] = []
+        print(each_sign)
+        sign_data = data_orderby_class[each_sign]
+        vectors = []
         print('process sign %d ' % each_sign)
-        for each_cap in data_orderby_class[each_sign]:
+        for each_cap in sign_data:
             each_cap = torch.from_numpy(np.array([each_cap])).double()
             each_cap = Variable(each_cap)
             vector = verifier(each_cap)
             vector = vector.data.float().numpy()[0]
-            verify_vectors[each_sign].append(vector)
+            vectors.append(vector)
             # print('verify cost time %f' % (time.clock() - start))
+        verify_vectors[each_sign] = vectors
+
+
 
     print('show image? y/n')
     is_show = input()
     if is_show == 'y':
         fig = plt.figure()
-        fig.add_subplot(111, title='%s verify vectors' % model_type)
+        fig.add_subplot(111, title='verify vectors')
 
     for each_sign in verify_vectors.keys():
         verify_vector_mean = np.mean(np.array(verify_vectors[each_sign]), axis=0)
@@ -834,7 +844,7 @@ def generate_verify_vector(model_type):
     if is_show == 'y':
         plt.show()
 
-    file_ = open(os.path.join(DATA_DIR_PATH, 'reference_verify_vector_'%model_type), 'wb')
+    file_ = open(os.path.join(DATA_DIR_PATH, 'reference_verify_vector'), 'wb')
     pickle.dump(verify_vectors, file_)
     file_.close()
 
@@ -843,6 +853,7 @@ def load_model_param(model, model_type_name):
         for file_ in files:
             file_name_split = os.path.splitext(file_)
             if file_name_split[1] == '.pkl' and file_name_split[0].startswith(model_type_name):
+                print('load model params of %s' % file_)
                 file_ = os.path.join(DATA_DIR_PATH, file_)
                 model.load_state_dict(torch.load(file_))
                 model.eval()
@@ -1008,15 +1019,14 @@ def main():
 
     # 输出上次处理过的数据的scale
     # print_scale('acc', 'all')
-    pickle_train_data_new()
+    # pickle_train_data_new()
 
     # 将采集数据转换为输入训练程序的数据格式
     # pickle_train_data(batch_num=87)
     #pickle_train_data_new()
 
     # 生成验证模型的参照系向量
-    # generate_verify_vector('rnn')
-    # generate_verify_vector('cnn')
+    generate_verify_vector()
 
     # 从recognized data history中取得数据
     # online_data = load_online_processed_data()
