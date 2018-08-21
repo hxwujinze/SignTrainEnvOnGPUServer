@@ -180,33 +180,66 @@ def cut_out_data(data):
             data[each_cap_type][each_data] = data[each_cap_type][each_data][16:144, :]
     return data
 
+from  multiprocessing import Pool
+
+
+def pickle_each_sign_data(data_set):
+    raw_data_set = data_set[0]
+    each_sign = data_set[1]
+
+    print("process sign %d" % each_sign)
+    extracted_data_set = []
+    for each_cap_type in CAP_TYPE_LIST:
+        print("extracting %s" % each_cap_type)
+        if each_cap_type == 'emg':
+            extracted_data_set.append(process_data.emg_feature_extract(raw_data_set, True)['trans'])
+        else:
+            extracted_data_blocks = feature_extract(raw_data_set, each_cap_type)
+            extracted_data_set.append(extracted_data_blocks['poly_fit'])
+    extracted_data_set = append_feature_vector(extracted_data_set)
+    # stack up for normalization
+    overall_data_mat = None
+    train_data_set = []
+    for each_mat in extracted_data_set:
+        if overall_data_mat is None:
+            overall_data_mat = each_mat
+        else:
+            overall_data_mat = np.vstack((overall_data_mat, each_mat))
+        # save into train data  sign id start from 0
+        train_data_set.append((each_mat, each_sign))
+
+
+    return train_data_set, overall_data_mat
 
 def pickle_train_data_new():
     with open(os.path.join(DATA_DIR_PATH, 'cleaned_data.dat'), 'r+b') as f:
         data_set = pickle.load(f)
 
     train_data_set = []
+    overall_data_mat = None
+    arg_list = []
     for each_sign in range(len(GESTURES_TABLE)):
-        print("process sign %d" % each_sign)
-        raw_data_set = data_set[each_sign]
-        extracted_data_set = []
-        for each_cap_type in CAP_TYPE_LIST:
-            print("extracting %s" % each_cap_type)
-            if each_cap_type == 'emg':
-                extracted_data_set.append(process_data.emg_feature_extract(raw_data_set, True)['trans'])
-            else:
-                extracted_data_blocks = feature_extract(raw_data_set, each_cap_type)
-                extracted_data_set.append(extracted_data_blocks['poly_fit'])
-        extracted_data_set = append_feature_vector(extracted_data_set)
-        # stack up for normalization
-        overall_data_mat = None
-        for each_mat in extracted_data_set:
-            if overall_data_mat is None:
-                overall_data_mat = each_mat
-            else:
-                overall_data_mat = np.vstack((overall_data_mat, each_mat))
-            # save into train data  sign id start from 0
-            train_data_set.append((each_mat, each_sign))
+        arg_list.append((data_set[each_sign], each_sign))
+
+    p = Pool(15)
+    res = p.map(pickle_each_sign_data, arg_list)
+
+
+    for each_res in res :
+        train_data_set.extend(each_res[0])
+        if overall_data_mat is None:
+            overall_data_mat = each_res[1]
+        else:
+            try:
+                overall_data_mat = np.vstack((overall_data_mat, each_res[1]))
+            except ValueError:
+                print(each_res[1])
+
+
+
+    print(overall_data_mat.shape)
+    print(len(train_data_set))
+    print(train_data_set[0])
 
     scaler = process_data.DataScaler(DATA_DIR_PATH)
     

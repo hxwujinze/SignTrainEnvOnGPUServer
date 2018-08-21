@@ -37,18 +37,66 @@ class SiameseNetwork(nn.Module):
 
 
         self.encode_model = nn.Sequential(
-            *list(CNN_model.CNN().children())[:3]
+            # *list(CNN_model.CNN().children())[:3]
+            nn.Sequential(
+                nn.Conv1d(
+                    in_channels=14,
+                    out_channels=32,
+                    kernel_size=3,
+                    padding=1,
+                    stride=1,
+                ),  # Lout=floor((Lin+2*padding-dilation*(kernel_size -1 ) - 1)/stride+1)
+                # output 28 x 32
+                nn.BatchNorm1d(32),
+                nn.LeakyReLU(),
+
+                nn.Conv1d(
+                    in_channels=32,
+                    out_channels=32,
+                    kernel_size=3,
+                    padding=1,
+                    stride=1,
+                ),
+                # output 28 x 32
+                nn.BatchNorm1d(32),
+                nn.LeakyReLU(),
+
+                nn.MaxPool1d(kernel_size=3, stride=2)  # 32 x 32
+            ),
+
+            nn.Sequential(
+                nn.Conv1d(
+                    in_channels=32,
+                    out_channels=64,
+                    kernel_size=3,
+                    padding=1,
+                    stride=1
+                ),  # 32 x 21
+                nn.BatchNorm1d(64),
+                nn.LeakyReLU(),
+
+                nn.Conv1d(
+                    in_channels=64,
+                    out_channels=64,
+                    kernel_size=3,
+                    padding=1,
+                    stride=1
+                ),  # 32 x 21
+                nn.BatchNorm1d(64),
+                nn.LeakyReLU(),
+
+                nn.MaxPool1d(kernel_size=3, stride=2)  # 128 x 16
+            )
+
         )
 
         self.out = nn.Sequential(
+            nn.Dropout(),
             nn.LeakyReLU(),
-            nn.Linear(1792, 1024),
+            nn.Linear(960, 512),
             nn.LeakyReLU(),
             nn.Dropout(),
-            nn.Linear(1024, 512),
-            nn.Tanh(),
-            nn.Dropout(),
-            nn.Linear(512, 512),
+            nn.Linear(512, 256),
         )
 
 
@@ -135,9 +183,13 @@ def test_result_output(result_list, epoch, loss):
         dissimilarities = F.pairwise_distance(*model_output)
         dissimilarities = torch.squeeze(dissimilarities).item()
 
-        if target_output == 1.0:
+        judeg_res = 1.0 - target_output
+        print(judeg_res)
+        if judeg_res > 0.9:
+            print('diff')
             diff_arg.append(dissimilarities)
-        elif target_output == 0.0:
+        else:
+            print('same')
             same_arg.append(dissimilarities)
 
 
@@ -164,21 +216,24 @@ def test_result_output(result_list, epoch, loss):
     print(diff_res)
 
 
-class ContrastiveLoss(torch.nn.Module):
+class ContrastiveLoss:
     """
     Contrastive loss function.
     Based on: http://yann.lecun.com/exdb/publis/pdf/hadsell-chopra-lecun-06.pdf
     """
 
     def __init__(self, margin=2.0):
-        torch.nn.Module.__init__(self)
         self.margin = margin
 
-    def forward(self, output1, output2, label):
+    def __call__(self, output1, output2, label):
         euclidean_distance = F.pairwise_distance(output1, output2)
         label = label.float()
-        loss_contrastive = torch.mean((1 - label) * torch.pow(euclidean_distance, 2) +
+        loss_contrastive = (1 - label) * torch.pow(euclidean_distance, 2) + \
                                       label * torch.pow(torch.clamp(self.margin - euclidean_distance,
-                                                                    min=0.0), 2))
+                                                                    min=0.0), 2)
+
+        # print(loss_contrastive)
+        loss_contrastive = torch.mean(loss_contrastive)
+        # print(loss_contrastive)
 
         return loss_contrastive

@@ -276,7 +276,7 @@ def data_clean(sign_id, data_batch):
                                 book,
                                 cap_dim_data)
                 outlier_cnt = np.count_nonzero(book[16:144])
-                if outlier_cnt > 64:
+                if outlier_cnt > 50:
                     outlier_dim_cnt += 1
             if outlier_dim_cnt >= 1:
                 need_remove = True
@@ -302,33 +302,56 @@ def read_gesture_table():
     f.close()
     pass
 
+from multiprocessing import Pool
+
+
+def load_and_clean_data(each_sign):
+    # print('cleaning sign: %d' % each_sign)
+    date_list = each_sign[1]
+    each_sign = each_sign[0]+ 1
+
+    data = load_train_data(sign_id=each_sign,
+                           date=date_list,
+                           batch_range=range(1, 199))
+    sign_cnt = 0
+    sign_cnt_cleaned = 0
+    cleaned_data = {
+        'acc': [],
+        'gyr': [],
+        'emg': []
+    }
+
+    if data is not None:
+        sign_cnt = len(data['acc'])
+        cleaned_data = data_clean(each_sign, data)
+        sign_cnt_cleaned = len(cleaned_data['acc'])
+
+    return sign_cnt, sign_cnt_cleaned, cleaned_data, each_sign
+
+
 def clean_all_data(date_list=None):
     if date_list is None:
         date_list = os.listdir(os.path.join(DATA_DIR_PATH, 'resort_data'))
-    cleaned_data = []
+    print(date_list)
+
+    arg_list = []
+    for each_sign in range(len(GESTURES_TABLE)):
+        arg_list.append((each_sign, date_list))
+    p = Pool(10)
+    res = p.map(load_and_clean_data, arg_list)
+
     sign_cnt = []
     sign_cnt_cleaned = []
-    for each_sign in range(len(GESTURES_TABLE)):
-        each_sign += 1
-        data = load_train_data(sign_id=each_sign,
-                               date=date_list,
-                               batch_range=range(1, 99))
-        if data is None:
-            sign_cnt.append(0)
-            sign_cnt_cleaned.append(0)
-            cleaned_data.append({
-                'acc':[],
-                'gyr':[],
-                'emg':[]
-            })
-            continue
-        sign_cnt.append(len(data['acc']))
-        data = data_clean(each_sign, data)
-        cleaned_data.append(data)
-        sign_cnt_cleaned.append(len(data['acc']))
+    cleaned_data = []
+    for each in res:
+        sign_cnt.append(each[0])
+        sign_cnt_cleaned.append(each[1])
+        cleaned_data.append(each[2])
+
     # sign id start from 0
     with open(os.path.join(DATA_DIR_PATH, 'cleaned_data.dat'), 'w+b') as f:
         pickle.dump(cleaned_data, f)
+
     print('after clean')
     all_cnt = 0
     all_cnt_clean = 0
@@ -372,7 +395,7 @@ def main():
     pass
     # read_gesture_table()
     # 存在离群点密集 batch 20    25
-    data_distribution_statistics(True)
+    # data_distribution_statistics(True)
     clean_all_data()
     #clean_data_test(28)
     # show_data_distribution(13)

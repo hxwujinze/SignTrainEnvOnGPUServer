@@ -121,7 +121,6 @@ def generate_data_set(split_ratio, data_set_type):
         data_set = pickle.load(f)
     print('data set size %d' % len(data_set))
     random.shuffle(data_set)
-    data_set = data_set[]
     train_data = data_set[int(len(data_set)*split_ratio) :]
     test_data = data_set[: int(len(data_set)*split_ratio)]
     return {
