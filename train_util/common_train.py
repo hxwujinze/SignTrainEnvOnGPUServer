@@ -4,6 +4,7 @@ import time
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
+from torch.utils.data import dataloader as DataLoader
 
 import numpy as np
 
@@ -62,6 +63,12 @@ def train(model: nn.Module,
             loss_his = []
             if epoch % scheduler_step_inter == 0 and epoch != 0:
                 exp_lr_scheduler.step()
+            if (epoch % scheduler_step_inter*3) == 0 and epoch != 0:
+                data_loader['train'] = DataLoader.DataLoader(data_loader['train'].dataset,
+                                                             shuffle=True,
+                                                             batch_size=data_loader['train'].batch_size*2,
+                                                             num_workers=3)
+
 
             for batch_x, batch_y in data_loader['train']:
                 if model_name.startswith("cnn"):
@@ -86,7 +93,7 @@ def train(model: nn.Module,
                     loss = loss_func(batch_out, batch_y)
                 else:
                     batch_out = model(*batch_x)
-
+                    batch_y = batch_y.float()
                     loss = loss_func(batch_out[0], batch_out[1], batch_y)
 
                 loss_his.append(loss.item())
@@ -131,7 +138,8 @@ def train(model: nn.Module,
 
                 accuracy_res = test_result_output_func(test_result_list, epoch=epoch, loss=loss_val)
                 model.train()
-                model.cuda()
+                if cuda_mode is not None:
+                    model.cuda()
 
     except KeyboardInterrupt:
         print("stop train\n save model ?")
@@ -155,7 +163,7 @@ def train(model: nn.Module,
     info = 'data_set_size:%d\n' % len(data_set['train']) + \
            str(accuracy_res) + \
            'loss: %f\n' % loss_val + \
-           'Epoch: %d\n' % EPOCH + accuracy_res
+           'Epoch: %d\n' % EPOCH
     info += str(model)
 
     file.writelines(info)

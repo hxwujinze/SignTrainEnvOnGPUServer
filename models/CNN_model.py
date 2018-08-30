@@ -8,8 +8,8 @@ import torch.utils.data.dataloader as DataLoader
 
 
 LEARNING_RATE = 0.0001
-EPOCH = 160
-BATCH_SIZE = 32 
+EPOCH = 500
+BATCH_SIZE = 64
 WEIGHT_DECAY = 0.0000001
 
 class CNN(nn.Module):
@@ -77,7 +77,7 @@ class CNN(nn.Module):
 
             nn.MaxPool1d(kernel_size=3, stride=2)  # 128 x 16
         )
-
+        '''
         self.conv3 = nn.Sequential(
             nn.Conv1d(
                 in_channels=128,
@@ -111,10 +111,11 @@ class CNN(nn.Module):
         
             nn.MaxPool1d(kernel_size=3, stride=2),  # 256 x 8
         )
+        '''
         self.out1 = nn.Sequential(
             nn.LeakyReLU(),
             nn.Dropout(),
-            nn.Linear(1792, 1024),
+            nn.Linear(1920, 1024),
             nn.LeakyReLU(),
             nn.Dropout(),
             nn.Linear(1024, 512),
@@ -136,7 +137,7 @@ class CNN(nn.Module):
         """
         x = self.conv1(x)
         x = self.conv2(x)
-        x = self.conv3(x)
+        # x = self.conv3(x)
         x = x.view(x.size(0), -1)
         x = self.out1(x)
         return x
@@ -150,12 +151,12 @@ class CNN(nn.Module):
         optimizer = torch.optim.Adam(self.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
         loss_func = nn.CrossEntropyLoss()
         lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.1)
-        data_set =generate_data_set(0.1, MyDataset)
+        data_set =generate_data_set(0.05, MyDataset)
         data_loader = {
             'train': DataLoader.DataLoader(data_set['train'], 
                                            shuffle=True,
                                            batch_size=BATCH_SIZE,
-                                           num_workers=2),
+                                           num_workers=1),
             'test': DataLoader.DataLoader(data_set['test'], 
                                           shuffle=True,
                                           batch_size=1,
@@ -171,10 +172,10 @@ class CNN(nn.Module):
               data_set=data_set,
               data_loader=data_loader,
               test_result_output_func=test_result_output,
-              cuda_mode = 1,
+              cuda_mode = 0,
               print_inter=2,
-              val_inter=50,
-              scheduler_step_inter=50
+              val_inter=30,
+              scheduler_step_inter=40
               )
 
     def load_params(self, path):

@@ -64,7 +64,7 @@ def load_train_data(sign_id, date, batch_range):
     """
     overall_data = None
     for each_date in date:
-        data_path = os.path.join('resort_data', each_date)
+        data_path = os.path.join('cleaned_data', each_date)
         for batch in batch_range:
             batch = int(batch)
             curr_batch_data = process_data_dev.load_train_data(sign_id, batch, data_path, verbose=False)
@@ -279,7 +279,7 @@ def data_clean(sign_id, data_batch):
                 if outlier_cnt > 50:
                     outlier_dim_cnt += 1
             if outlier_dim_cnt >= 1:
-                need_remove = True
+ #               need_remove = True
                 break
 
         if not need_remove:
@@ -312,7 +312,7 @@ def load_and_clean_data(each_sign):
 
     data = load_train_data(sign_id=each_sign,
                            date=date_list,
-                           batch_range=range(1, 199))
+                           batch_range=range(1, 299))
     sign_cnt = 0
     sign_cnt_cleaned = 0
     cleaned_data = {
@@ -331,7 +331,7 @@ def load_and_clean_data(each_sign):
 
 def clean_all_data(date_list=None):
     if date_list is None:
-        date_list = os.listdir(os.path.join(DATA_DIR_PATH, 'resort_data'))
+        date_list = os.listdir(os.path.join(DATA_DIR_PATH, 'cleaned_data'))
     print(date_list)
 
     arg_list = []

@@ -14,16 +14,13 @@ from process_data import DataScaler
 class MyDataset(torch_data.Dataset):
     def __init__(self, data_set):
         self.data_set = data_set
-        self.scaler = DataScaler(DATA_DIR_PATH)
 
     def __len__(self):
         return len(self.data_set)
-        pass
 
     def __getitem__(self, item):
         item = self.data_set[item]
-        data_mat = self.scaler.normalize(item[0], 'cnn')
-        data_mat = torch.from_numpy(data_mat.T).float()
+        data_mat = torch.from_numpy(item[0]).float()
         label = torch.from_numpy(np.array(item[1], dtype=int))
         return data_mat, label
 
@@ -38,12 +35,10 @@ class SiameseNetworkTrainDataSet:
         :param data:
         """
         self.data_len = len(data)
-        self.scaler = DataScaler(DATA_DIR_PATH)
         self.data = data
         self.data_dict = {}
         for each_data, each_label in data:
             each_label = int(each_label)
-            each_data = self.scaler.normalize(each_data, 'cnn')
             if self.data_dict.get(each_label) is None:
                 self.data_dict[each_label] = [each_data]
             else:
@@ -74,7 +69,7 @@ class SiameseNetworkTrainDataSet:
                     x2_label = random.randint(1, self.class_cnt)
             x2_ = random.choice(self.data_dict[x2_label])
 
-        return (torch.from_numpy(x1_.T).float(),torch.from_numpy(x2_.T).float()), \
+        return (torch.from_numpy(x1_).float(),torch.from_numpy(x2_).float()), \
                0.0 if get_same else 1.0
 
 
@@ -119,8 +114,13 @@ def generate_data_set(split_ratio, data_set_type):
     data_path = os.path.join(DATA_DIR_PATH, 'new_train_data')
     with open(data_path, 'r+b') as f:
         data_set = pickle.load(f)
+        
     print('data set size %d' % len(data_set))
     random.shuffle(data_set)
+    scaler = DataScaler(DATA_DIR_PATH)
+    for each in range(len(data_set)):
+        data_set[each] = (scaler.normalize(data_set[each][0], 'cnn').T,
+                          data_set[each][1] )
     train_data = data_set[int(len(data_set)*split_ratio) :]
     test_data = data_set[: int(len(data_set)*split_ratio)]
     return {
