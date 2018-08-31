@@ -10,8 +10,8 @@ import torch.nn.functional as F
 
 
 WEIGHT_DECAY = 0.000002
-BATCH_SIZE = 128
-LEARNING_RATE = 0.0000022
+BATCH_SIZE = 256
+LEARNING_RATE = 0.00001
 EPOCH = 200
 
 class SiameseNetwork(nn.Module):
@@ -85,6 +85,7 @@ class SiameseNetwork(nn.Module):
             nn.MaxPool1d(kernel_size=3, stride=2)
 
         )
+        # todo output dim is too many  256 may enough
         self.out = nn.Sequential(
             nn.Dropout(),
             nn.LeakyReLU(),
@@ -94,6 +95,7 @@ class SiameseNetwork(nn.Module):
             nn.Linear(1024, 1024),
             nn.Dropout(),
             nn.LeakyReLU(),
+
             nn.Linear(1024, 512),
         )
 
@@ -147,7 +149,7 @@ class SiameseNetwork(nn.Module):
               test_result_output_func=test_result_output,
               cuda_mode=1,
               print_inter=2,
-              val_inter=10,
+              val_inter=20,
               scheduler_step_inter=30
               )
 
@@ -179,14 +181,16 @@ def test_result_output(result_list, epoch, loss):
 
     same_arg = np.mean(same_arg, axis=-1)
     diff_arg = np.mean(diff_arg, axis=-1)
-    print("****************************")
-    print("epoch: %s\nloss: %s\nprogress: %.2f lr: %f" %
-          (epoch, loss, 100 * epoch / EPOCH, LEARNING_RATE))
-    diff_res = "diff info \n    diff max: %f min: %f, mean: %f var: %f\n " % \
-               (diff_max, diff_min, diff_arg, diff_var) + \
+    diff_res = "****************************"
+    diff_res += "epoch: %s\nloss: %s\nprogress: %.2f lr: %f" % \
+                        (epoch, loss, 100 * epoch / EPOCH, LEARNING_RATE)
+    diff_res += "diff info \n    diff max: %f min: %f, mean: %f var: %f\n " % \
+                                      (diff_max, diff_min, diff_arg, diff_var) + \
                "    same max: %f min: %f, mean: %f, same_var %f" % \
-               (same_max, same_min, same_arg, same_var)
+                            (same_max, same_min, same_arg, same_var)
     print(diff_res)
+    return diff_res
+
 
 class ContrastiveLoss(torch.nn.Module):
     """

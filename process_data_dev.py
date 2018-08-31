@@ -14,6 +14,7 @@ import torch
 from matplotlib import font_manager
 from matplotlib.legend_handler import HandlerLine2D
 from torch.autograd import Variable
+import torch.nn.functional as F
 
 import process_data
 # from models.CNN_model import CNN, get_max_index
@@ -797,31 +798,30 @@ def generate_verify_vector():
     #     raw_data = raw_data[1]
     # train_data => (batch_amount, data_set_emg)
     scaler = process_data.DataScaler(DATA_DIR_PATH)
+    random.shuffle(raw_data)
 
     data_orderby_class = {}
     print('pre processing data')
     for (each_data, each_label) in raw_data:
         each_data = scaler.normalize(each_data, 'cnn').T
         if data_orderby_class.get(each_label) is None:
-            # 需要调整长度以及转置成时序
             data_orderby_class[each_label] = [each_data]
         else:
             data_orderby_class[each_label].append(each_data)
 
+
     verifier = SiameseNetwork(train=False)
-    load_model_param(verifier, 'verify_model')
+    load_model_param(verifier, 'verify')
     verifier.double()
     verify_vectors = {}
     for each_sign in data_orderby_class.keys():
-        print(each_sign)
         sign_data = data_orderby_class[each_sign]
         vectors = []
         print('process sign %d ' % each_sign)
         for each_cap in sign_data:
             each_cap = torch.from_numpy(np.array([each_cap])).double()
-            each_cap = Variable(each_cap)
             vector = verifier(each_cap)
-            vector = vector.data.float().numpy()[0]
+            vector = vector.data.numpy()[0]
             vectors.append(vector)
             # print('verify cost time %f' % (time.clock() - start))
         verify_vectors[each_sign] = vectors
@@ -837,11 +837,11 @@ def generate_verify_vector():
     for each_sign in verify_vectors.keys():
         verify_vector_mean = np.mean(np.array(verify_vectors[each_sign]), axis=0)
         verify_vectors[each_sign] = verify_vector_mean
-        if is_show == 'y':
-            plt.scatter(range(len(verify_vector_mean)), verify_vector_mean, marker='.')
-            print("sign: " + str(each_sign))
-            plt.pause(0.3)
+
     if is_show == 'y':
+        for each_vec in verify_vectors.keys():
+            plt.scatter(range(len(verify_vectors[each_vec])), verify_vectors[each_vec], marker='.')
+            plt.pause(0.01)
         plt.show()
 
     file_ = open(os.path.join(DATA_DIR_PATH, 'reference_verify_vector'), 'wb')
@@ -849,15 +849,15 @@ def generate_verify_vector():
     file_.close()
 
 def load_model_param(model, model_type_name):
-    for root, dirs, files in os.walk(DATA_DIR_PATH):
-        for file_ in files:
-            file_name_split = os.path.splitext(file_)
-            if file_name_split[1] == '.pkl' and file_name_split[0].startswith(model_type_name):
-                print('load model params of %s' % file_)
-                file_ = os.path.join(DATA_DIR_PATH, file_)
-                model.load_state_dict(torch.load(file_))
-                model.eval()
-                return model
+    files = os.listdir(DATA_DIR_PATH)
+    for file_ in files:
+        file_name_split = os.path.splitext(file_)
+        if file_name_split[1] == '.pkl' and file_name_split[0].startswith(model_type_name):
+            print('load model params of %s' % file_)
+            file_ = os.path.join(DATA_DIR_PATH, file_)
+            model.load_state_dict(torch.load(file_))
+            model.eval()
+            return model
 
 # GESTURES_TABLE = ['朋友', '家', '回', '去', '迟到', '交流', '联系', '客气', '再见', '劳驾', '谢谢',
 #                   '对不起', '没关系', '起来', '帮助', '中国', '时间', '时差', '天', '延期', '早上', '上午',
@@ -1023,10 +1023,10 @@ def main():
 
     # 将采集数据转换为输入训练程序的数据格式
     # pickle_train_data(batch_num=87)
-    pickle_train_data_new()
+    # pickle_train_data_new()
 
     # 生成验证模型的参照系向量
-    #generate_verify_vector()
+    generate_verify_vector()
 
     # 从recognized data history中取得数据
     # online_data = load_online_processed_data()

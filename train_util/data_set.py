@@ -73,8 +73,7 @@ class SiameseNetworkTrainDataSet:
                0.0 if get_same else 1.0
 
 
-        # print("l1 %s, l2 %s, %s" % (x1_label, x2_label, get_same))
-        # return (x1_.T, x2_.T), \
+        # return (x1_, x2_), \
         #        np.array([0 if get_same else 1], dtype=np.float32)
 
     def look_input_data(self):
