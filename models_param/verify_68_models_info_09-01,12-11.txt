@@ -1,0 +1,38 @@
+data_set_size:34310
+****************************epoch: 200
+loss: 0.23569520026968235
+progress: 100.00 lr: 0.000100diff info 
+    diff max: 4.430212 min: 0.117423, mean: 2.205452 var: 0.649568
+     same max: 2.892598 min: 0.000016, mean: 0.248698, same_var 0.081434loss: 0.235695
+Epoch: 200
+SiameseNetwork(
+  (coding_model): Sequential(
+    (0): Conv1d(14, 64, kernel_size=(3,), stride=(1,), padding=(1,))
+    (1): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (2): LeakyReLU(negative_slope=0.01)
+    (3): Conv1d(64, 64, kernel_size=(3,), stride=(1,), padding=(1,))
+    (4): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (5): LeakyReLU(negative_slope=0.01)
+    (6): MaxPool1d(kernel_size=3, stride=2, padding=0, dilation=1, ceil_mode=False)
+    (7): Conv1d(64, 128, kernel_size=(3,), stride=(1,), padding=(1,))
+    (8): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (9): LeakyReLU(negative_slope=0.01)
+    (10): Conv1d(128, 128, kernel_size=(3,), stride=(1,), padding=(1,))
+    (11): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (12): Conv1d(128, 128, kernel_size=(3,), stride=(1,), padding=(1,))
+    (13): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (14): LeakyReLU(negative_slope=0.01)
+    (15): MaxPool1d(kernel_size=3, stride=2, padding=0, dilation=1, ceil_mode=False)
+  )
+  (out): Sequential(
+    (0): Dropout(p=0.5)
+    (1): LeakyReLU(negative_slope=0.01)
+    (2): Linear(in_features=1920, out_features=1024, bias=True)
+    (3): Dropout(p=0.5)
+    (4): LeakyReLU(negative_slope=0.01)
+    (5): Linear(in_features=1024, out_features=512, bias=True)
+    (6): Dropout(p=0.5)
+    (7): LeakyReLU(negative_slope=0.01)
+    (8): Linear(in_features=512, out_features=256, bias=True)
+  )
+)

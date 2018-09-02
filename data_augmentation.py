@@ -323,8 +323,10 @@ def load_and_clean_data(each_sign):
 
     if data is not None:
         sign_cnt = len(data['acc'])
-        cleaned_data = data_clean(each_sign, data)
+        # cleaned_data = data_clean(each_sign, data)
+        cleaned_data = data
         sign_cnt_cleaned = len(cleaned_data['acc'])
+
 
     return sign_cnt, sign_cnt_cleaned, cleaned_data, each_sign
 
@@ -333,7 +335,6 @@ def clean_all_data(date_list=None):
     if date_list is None:
         date_list = os.listdir(os.path.join(DATA_DIR_PATH, 'cleaned_data'))
     print(date_list)
-
     arg_list = []
     for each_sign in range(len(GESTURES_TABLE)):
         arg_list.append((each_sign, date_list))

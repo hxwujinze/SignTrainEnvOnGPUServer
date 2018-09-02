@@ -10,9 +10,9 @@ import torch.nn.functional as F
 
 
 WEIGHT_DECAY = 0.000002
-BATCH_SIZE = 256
-LEARNING_RATE = 0.00001
-EPOCH = 200
+BATCH_SIZE = 128
+LEARNING_RATE = 0.0001
+EPOCH = 400
 
 class SiameseNetwork(nn.Module):
     def __init__(self, train=True):
@@ -88,15 +88,14 @@ class SiameseNetwork(nn.Module):
         # todo output dim is too many  256 may enough
         self.out = nn.Sequential(
             nn.Dropout(),
-            nn.LeakyReLU(),
+            nn.Tanh(),
             nn.Linear(1920, 1024),
             nn.Dropout(),
             nn.LeakyReLU(),
-            nn.Linear(1024, 1024),
+            nn.Linear(1024, 512),
             nn.Dropout(),
             nn.LeakyReLU(),
-
-            nn.Linear(1024, 512),
+            nn.Linear(512, 3),
         )
 
 
@@ -150,7 +149,7 @@ class SiameseNetwork(nn.Module):
               cuda_mode=1,
               print_inter=2,
               val_inter=20,
-              scheduler_step_inter=30
+              scheduler_step_inter=40
               )
 
 

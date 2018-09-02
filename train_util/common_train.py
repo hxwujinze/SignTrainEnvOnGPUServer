@@ -63,7 +63,7 @@ def train(model: nn.Module,
             loss_his = []
             if epoch % scheduler_step_inter == 0 and epoch != 0:
                 exp_lr_scheduler.step()
-            if (epoch % scheduler_step_inter*3) == 0 and epoch != 0:
+            if (epoch % int(scheduler_step_inter*2.5) ) == 0 and epoch != 0:
                 if data_loader['train'].batch_size < 512:
                     data_loader['train'] = DataLoader.DataLoader(data_loader['train'].dataset,
                                                                  shuffle=True,
@@ -148,7 +148,7 @@ def train(model: nn.Module,
                 if cuda_mode is not None:
                     model.cuda()
 
-    except :
+    except KeyboardInterrupt:
         print("stop train\n save model ?")
         res = input()
         if res != 'y':

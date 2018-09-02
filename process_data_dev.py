@@ -241,7 +241,6 @@ def pickle_train_data_new():
 
     print(overall_data_mat.shape)
     print(len(train_data_set))
-    print(train_data_set[0])
 
     scaler = process_data.DataScaler(DATA_DIR_PATH)
     
@@ -1006,7 +1005,7 @@ def main():
     # data_set = load_feed_back_data()[sign_id]
 
     # resort_data(['0816-*',])
-    # statistics_data('resort_data')
+    # statistics_data('cleaned_data')
 
 
     # print_train_data(sign_id=1,
@@ -1023,10 +1022,10 @@ def main():
 
     # 将采集数据转换为输入训练程序的数据格式
     # pickle_train_data(batch_num=87)
-    # pickle_train_data_new()
+    pickle_train_data_new()
 
     # 生成验证模型的参照系向量
-    generate_verify_vector()
+    # generate_verify_vector()
 
     # 从recognized data history中取得数据
     # online_data = load_online_processed_data()
