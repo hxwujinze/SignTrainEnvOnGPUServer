@@ -65,7 +65,7 @@ def train(model: nn.Module,
             if epoch % curr_step_inter == 0 and epoch != 0:
                 curr_step_inter = int(curr_step_inter * 1.5)
                 exp_lr_scheduler.step()
-            if (epoch % int(scheduler_step_inter*2.5) ) == 0 and \
+            if (epoch % int(scheduler_step_inter*2) ) == 0 and \
                 epoch != 0 and data_loader['train'].batch_size < 512:
 
                     data_loader['train'] = DataLoader.DataLoader(data_loader['train'].dataset,
