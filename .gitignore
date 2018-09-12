@@ -1,4 +1,6 @@
-*.pkl
+*.*
 data/*
+*.zip
+*.pkl
 *.pyc
-
+params/*
