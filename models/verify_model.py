@@ -10,7 +10,7 @@ import torch.nn.functional as F
 
 
 WEIGHT_DECAY = 0.000002
-BATCH_SIZE = 128
+BATCH_SIZE = 64
 LEARNING_RATE = 0.0001
 EPOCH = 400
 
@@ -95,7 +95,7 @@ class SiameseNetwork(nn.Module):
             nn.Linear(1024, 512),
             nn.Dropout(),
             nn.LeakyReLU(),
-            nn.Linear(512, 3),
+            nn.Linear(512, 256),
         )
 
 
@@ -148,8 +148,8 @@ class SiameseNetwork(nn.Module):
               test_result_output_func=test_result_output,
               cuda_mode=1,
               print_inter=2,
-              val_inter=20,
-              scheduler_step_inter=40
+              val_inter=30,
+              scheduler_step_inter=70
               )
 
 

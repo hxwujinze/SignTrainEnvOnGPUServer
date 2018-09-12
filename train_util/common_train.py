@@ -58,23 +58,20 @@ def train(model: nn.Module,
     # start training
     # epoch: 用所有训练数据跑一遍称为一次epoch
     accuracy_res = ""
+    curr_step_inter = scheduler_step_inter
     try:
         for epoch in range(EPOCH + 1):
             loss_his = []
-            if epoch % scheduler_step_inter == 0 and epoch != 0:
+            if epoch % curr_step_inter == 0 and epoch != 0:
+                curr_step_inter = int(curr_step_inter * 1.5)
                 exp_lr_scheduler.step()
-            if (epoch % int(scheduler_step_inter*2.5) ) == 0 and epoch != 0:
-                if data_loader['train'].batch_size < 512:
+            if (epoch % int(scheduler_step_inter*2.5) ) == 0 and \
+                epoch != 0 and data_loader['train'].batch_size < 512:
+
                     data_loader['train'] = DataLoader.DataLoader(data_loader['train'].dataset,
                                                                  shuffle=True,
                                                                  batch_size=data_loader['train'].batch_size * 2,
                                                                  num_workers=1)
-                else:
-                    data_loader['train'] = DataLoader.DataLoader(data_loader['train'].dataset,
-                                                                 shuffle=True,
-                                                                 batch_size=data_loader['train'].batch_size+50,
-                                                                 num_workers=1)
-
 
 
             for batch_x, batch_y in data_loader['train']:

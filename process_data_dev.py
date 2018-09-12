@@ -252,6 +252,15 @@ def pickle_train_data_new():
     #scaler.expand_scale_data()
     scaler.store_scale_data()
 
+    normed_data = []
+    for each in train_data_set:
+        data_mat = scaler.normalize(each[0], 'cnn')
+        data_mat = np.where(data_mat > 0.00000000001, data_mat, 0)
+        normed_data.append((data_mat, each[1]))
+    train_data_set = normed_data
+
+
+
     with open(os.path.join(DATA_DIR_PATH, 'new_train_data'), 'w+b') as f:
         pickle.dump(train_data_set, f)
 
