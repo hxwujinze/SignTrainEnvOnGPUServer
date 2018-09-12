@@ -116,12 +116,15 @@ def generate_data_set(split_ratio, data_set_type):
         
     print('data set size %d' % len(data_set))
     random.shuffle(data_set)
-    scaler = DataScaler(DATA_DIR_PATH)
     for each in range(len(data_set)):
         data_mat = data_set[each][0].T
         data_mat = np.where(data_mat > 0.00000000001, data_mat, 0)
+<<<<<<< HEAD
         data_set[each] = (data_matQ,
                           data_set[each][1] )
+=======
+        data_set[each] = (data_mat, data_set[each][1])
+>>>>>>> c91f1849b4f2a4a352277a43e798514ca72970cd
     train_data = data_set[int(len(data_set)*split_ratio) :]
     test_data = data_set[: int(len(data_set)*split_ratio)]
     return {

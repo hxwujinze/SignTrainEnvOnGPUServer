@@ -91,11 +91,16 @@ class SiameseNetwork(nn.Module):
             nn.Tanh(),
             nn.Linear(1920, 1024),
             nn.Dropout(),
+<<<<<<< HEAD
             nn.LeakyReLU(),
             nn.Linear(1024, 512),
             nn.Dropout(),
             nn.LeakyReLU(),
             nn.Linear(512, 256),
+=======
+            nn.Tanh(),
+            nn.Linear(1024, 256),
+>>>>>>> c91f1849b4f2a4a352277a43e798514ca72970cd
         )
 
 
@@ -146,9 +151,13 @@ class SiameseNetwork(nn.Module):
               data_set=data_set,
               data_loader=data_loader,
               test_result_output_func=test_result_output,
-              cuda_mode=1,
+              cuda_mode=0,
               print_inter=2,
+<<<<<<< HEAD
               val_inter=30,
+=======
+              val_inter=20,
+>>>>>>> c91f1849b4f2a4a352277a43e798514ca72970cd
               scheduler_step_inter=70
               )
 
