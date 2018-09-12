@@ -7,12 +7,8 @@ import shutil
 import time
 from multiprocessing import Pool
 
-import matplotlib as mpl
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from matplotlib import font_manager
-from matplotlib.legend_handler import HandlerLine2D
 from torch.autograd import Variable
 import torch.nn.functional as F
 
@@ -34,8 +30,6 @@ FEATURE_LENGTH = 44
 
 DATA_DIR_PATH = os.path.join(os.getcwd(), 'data')
 print(DATA_DIR_PATH)
-myfont = font_manager.FontProperties(fname='C:/Windows/Fonts/msyh.ttc')
-mpl.rcParams['axes.unicode_minus'] = False
 
 CAP_TYPE_LIST = ['acc', 'gyr', 'emg']
 

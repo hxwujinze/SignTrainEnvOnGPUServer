@@ -6,13 +6,10 @@ import torch
 
 if __name__ == "__main__":
 
-    # m = SN.SiameseNetwork()
-    # dirs = os.listdir('.')
-    # for each in dirs:
-    #    if each.startswith('verify') and each.endswith('.pkl'):
-    #        m.load_state_dict(torch.load(each))
-    #        print('load params %s' % each)
-    #        break
+
+    # m = CNN_model.CNN()
     # m.exc_train()
-    m = CNN_model.CNN()
+    
+    m = SN.SiameseNetwork()
     m.exc_train()
+

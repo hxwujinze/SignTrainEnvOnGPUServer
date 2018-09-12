@@ -7,10 +7,10 @@ import torch.utils.data.dataloader as DataLoader
 
 
 
-LEARNING_RATE = 0.0003
+LEARNING_RATE = 0.0001
 EPOCH = 700
-BATCH_SIZE = 64
-WEIGHT_DECAY = 0.00005
+BATCH_SIZE = 32
+WEIGHT_DECAY = 0.0000005
 
 class CNN(nn.Module):
     def __init__(self):
@@ -63,7 +63,6 @@ class CNN(nn.Module):
             ),  # 32 x 21
             nn.BatchNorm1d(128),
 
-            nn.LeakyReLU(),
             nn.Conv1d(
                 in_channels=128,
                 out_channels=128,
@@ -73,22 +72,20 @@ class CNN(nn.Module):
             ),  # 32 x 21
             nn.BatchNorm1d(128),
 
-
             nn.MaxPool1d(kernel_size=2)  # 128 x 16
         )
-
 
 
         self.out1 = nn.Sequential(
             nn.LeakyReLU(),
             nn.Dropout(),
-            nn.Linear(1920, 1024),
-            nn.LeakyReLU(),
+            nn.Linear(1920, 512),
+            nn.Tanh(),
             nn.Dropout(),
-            nn.Linear(1024, 1024),
+            nn.Linear(512, 512),
             nn.Tanh(),  #  use tanh as activity function next to the softmax
             nn.Dropout(),
-            nn.Linear(1024, 69),
+            nn.Linear(512, 69),
             nn.Softmax(),
         )
 
@@ -104,6 +101,7 @@ class CNN(nn.Module):
         """
         x = self.conv1(x)
         x = self.conv2(x)
+        # x = self.conv3(x)
         x = x.view(x.size(0), -1)
         x = self.out1(x)
         return x
@@ -138,10 +136,10 @@ class CNN(nn.Module):
               data_set=data_set,
               data_loader=data_loader,
               test_result_output_func=test_result_output,
-              cuda_mode = 1,
+              cuda_mode = 0,
               print_inter=2,
               val_inter=30,
-              scheduler_step_inter=60
+              scheduler_step_inter=70
               )
 
     def load_params(self, path):
