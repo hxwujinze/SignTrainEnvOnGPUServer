@@ -1027,10 +1027,10 @@ def main():
 
     # 将采集数据转换为输入训练程序的数据格式
     # pickle_train_data(batch_num=87)
-    pickle_train_data_new()
+    # pickle_train_data_new()
 
     # 生成验证模型的参照系向量
-    # generate_verify_vector()
+    generate_verify_vector()
 
     # 从recognized data history中取得数据
     # online_data = load_online_processed_data()

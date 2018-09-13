@@ -6,10 +6,11 @@ import torch.nn as nn
 import torch.utils.data.dataloader as DataLoader
 
 from models.make_resnet import my_resnet
+from models.make_VGG import make_vgg
 
 
 LEARNING_RATE = 0.0001
-EPOCH = 100
+EPOCH = 130
 BATCH_SIZE = 128
 WEIGHT_DECAY = 0.000005
 
@@ -17,7 +18,9 @@ class CNN(nn.Module):
     def __init__(self):
         nn.Module.__init__(self)
 
-        self.resnet = my_resnet()
+        # self.convs = my_resnet(layers=[2 ,2], layer_planes=[64, 128])
+        self.convs = make_vgg(input_chnl=14, layers=[2, 3], layers_chnl=[64, 128])
+
 
         self.out = nn.Sequential(
             nn.Dropout(),
@@ -35,7 +38,7 @@ class CNN(nn.Module):
         :param encode_mode: set True if just need the feature vector
         :return:
         """
-        x = self.resnet(x)
+        x = self.convs(x)
         x = self.out(x)
         return x
 
@@ -44,6 +47,8 @@ class CNN(nn.Module):
         # only import train staff in training env
         from train_util.data_set import generate_data_set, MyDataset
         from train_util.common_train import train
+        print("CNN classify model start training")
+        print(str(self))
 
         optimizer = torch.optim.Adam(self.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
         loss_func = nn.CrossEntropyLoss()
@@ -69,10 +74,10 @@ class CNN(nn.Module):
               data_set=data_set,
               data_loader=data_loader,
               test_result_output_func=test_result_output,
-              cuda_mode = 0,
+              cuda_mode = 1,
               print_inter=2,
-              val_inter=20,
-              scheduler_step_inter=70
+              val_inter=30,
+              scheduler_step_inter=50
               )
 
     def load_params(self, path):

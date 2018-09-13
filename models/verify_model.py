@@ -6,15 +6,16 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from models.make_resnet import my_resnet
+from models.make_VGG import make_vgg
 
 # CNN: input len -> output len
 # Lout=floor((Lin+2∗padding−dilation∗(kernel_size−1)−1)/stride+1)
 
 
 WEIGHT_DECAY = 0.000002
-BATCH_SIZE = 128
+BATCH_SIZE = 64
 LEARNING_RATE = 0.001
-EPOCH = 200
+EPOCH = 250
 
 class SiameseNetwork(nn.Module):
     def __init__(self, train=True):
@@ -30,12 +31,14 @@ class SiameseNetwork(nn.Module):
             self.status = 'eval'
 
 
-        self.coding_model = my_resnet()
+        self.coding_model = my_resnet(layers=[2 ,2], layer_planes=[64, 128])
+        # self.coding_model = make_vgg(input_chnl=14, layers=[2, 3], layers_chnl=[64, 128])
+
 
         self.out = torch.nn.Sequential(
             nn.Dropout(),
             nn.LeakyReLU(),
-            nn.Linear(256, 128),
+            nn.Linear(256, 32),
         )
 
 
@@ -61,6 +64,8 @@ class SiameseNetwork(nn.Module):
         from train_util.data_set import generate_data_set, SiameseNetworkTrainDataSet
         from train_util.common_train import train
         from torch.utils.data import dataloader as DataLoader
+        print("verify model start training")
+        print(str(self))
 
         optimizer = torch.optim.Adam(self.parameters(), lr=LEARNING_RATE)
         loss_func = ContrastiveLoss()
@@ -85,10 +90,10 @@ class SiameseNetwork(nn.Module):
               data_set=data_set,
               data_loader=data_loader,
               test_result_output_func=test_result_output,
-              cuda_mode=0,
+              cuda_mode=1,
               print_inter=2,
-              val_inter=20,
-              scheduler_step_inter=50
+              val_inter=25,
+              scheduler_step_inter=60
               )
 
 

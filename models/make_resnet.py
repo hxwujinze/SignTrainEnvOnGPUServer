@@ -1,6 +1,5 @@
 import torch.nn as nn
 import math
-import torch.utils.model_zoo as model_zoo
 
 
 def conv3x3(in_planes, out_planes, stride=1):
@@ -94,13 +93,18 @@ class Bottleneck(nn.Module):
 
 class ResNet(nn.Module):
 
-    def __init__(self, block, layers):
+    def __init__(self, block, layers, layer_planes):
         """
         生成resnet
         :param block: 用什么样的block？
         :param layers: block里面放几层？
+        :param layer_planes: the output channel in each block
         :param num_classes: 分多少类别？
         """
+
+        if len(layers) != len(layer_planes):
+            raise Exception('the length of layers cnt args and planes args should same')
+
         self.inplanes = 64
         super(ResNet, self).__init__()
 
@@ -109,9 +113,17 @@ class ResNet(nn.Module):
         self.bn1 = nn.BatchNorm1d(64)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool1d(kernel_size=3, stride=2, padding=1)
-        self.layer1 = self._make_layer(block, 64, layers[0])
-        self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
+
+        block_to_add = []
+        for each in range(len(layers)):
+            if each == 0:
+                block_to_add.append(self._make_layer(block, 64, layers[each]))
+            else:
+                block_to_add.append(self._make_layer(block, layer_planes[each], layers[each]))
+        self.blocks = nn.Sequential(*block_to_add)
+
         self.avgpool = nn.AdaptiveAvgPool1d(2)
+
 
         for m in self.modules():
             # 对中间的conv 和 BN层进行初始化
@@ -146,8 +158,7 @@ class ResNet(nn.Module):
         x = self.relu(x)
         x = self.maxpool(x)
 
-        x = self.layer1(x)
-        x = self.layer2(x)
+        x = self.blocks(x)
 
         x = self.avgpool(x)
         x = x.view(x.size(0), -1)
@@ -155,12 +166,13 @@ class ResNet(nn.Module):
         return x
 
 
-def my_resnet():
+def my_resnet( layers:list, layer_planes:list):
     """
-    create a resnet
-    :param num_class:
+    make a resnet model
+    :param layers: the layers amount in each block
+    :param layer_planes: the output channel in each block
     :return:
     """
-    model = ResNet(BasicBlock, [2, 2])
+    model = ResNet(BasicBlock, layers, layer_planes)
     return model
 
