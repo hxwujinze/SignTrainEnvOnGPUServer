@@ -13,6 +13,8 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 
 import process_data
+
+import matplotlib.pyplot as plt
 # from models.CNN_model import CNN, get_max_index
 from models.verify_model import SiameseNetwork
 from process_data import feature_extract_single, feature_extract, TYPE_LEN, \
@@ -799,13 +801,13 @@ def generate_verify_vector():
     # except IndexError:
     #     raw_data = raw_data[1]
     # train_data => (batch_amount, data_set_emg)
-    scaler = process_data.DataScaler(DATA_DIR_PATH)
     random.shuffle(raw_data)
 
     data_orderby_class = {}
     print('pre processing data')
     for (each_data, each_label) in raw_data:
-        each_data = scaler.normalize(each_data, 'cnn').T
+        each_data = each_data.T
+        
         if data_orderby_class.get(each_label) is None:
             data_orderby_class[each_label] = [each_data]
         else:
@@ -813,7 +815,7 @@ def generate_verify_vector():
 
 
     verifier = SiameseNetwork(train=False)
-    load_model_param(verifier, 'verify')
+    verifier = load_model_param(verifier, 'verify')
     verifier.double()
     verify_vectors = {}
     for each_sign in data_orderby_class.keys():

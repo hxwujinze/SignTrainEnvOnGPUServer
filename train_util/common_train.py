@@ -63,7 +63,7 @@ def train(model: nn.Module,
         for epoch in range(EPOCH + 1):
             loss_his = []
             if epoch % curr_step_inter == 0 and epoch != 0:
-                curr_step_inter = int(curr_step_inter * 1.5)
+                curr_step_inter = int(curr_step_inter * 1)
                 exp_lr_scheduler.step()
             if (epoch % int(scheduler_step_inter*2) ) == 0 and \
                 epoch != 0 and data_loader['train'].batch_size < 512:
@@ -174,8 +174,9 @@ def train(model: nn.Module,
     file.close()
 
 def get_max_index(tensor):
-    # print('置信度')
-    # print(tensor.data.float()[0])
+    print('置信度')
+    print(list(tensor))
+
     tensor = torch.max(tensor, dim=1)[1]
     # 对矩阵延一个固定方向取最大值
     return torch.squeeze(tensor).data.int()

@@ -5,90 +5,26 @@ import torch
 import torch.nn as nn
 import torch.utils.data.dataloader as DataLoader
 
+from models.make_resnet import my_resnet
 
 
 LEARNING_RATE = 0.0001
-EPOCH = 700
-BATCH_SIZE = 32
-WEIGHT_DECAY = 0.0000005
+EPOCH = 100
+BATCH_SIZE = 128
+WEIGHT_DECAY = 0.000005
 
 class CNN(nn.Module):
     def __init__(self):
         nn.Module.__init__(self)
 
-        # input 14 x 64
-        self.conv1 = nn.Sequential(
-            # 使用VGGNet架构卷积
-            nn.Conv1d(
-                in_channels=14,
-                out_channels=64,
-                kernel_size=3,
-                padding=1,
-                stride=1,
-            ),  # Lout=floor((Lin+2*padding-dilation*(kernel_size -1 ) - 1)/stride+1)
-            # output 28 x 64
-            nn.BatchNorm1d(64),
+        self.resnet = my_resnet()
 
-            nn.LeakyReLU(),
-            nn.Conv1d(
-                in_channels=64,
-                out_channels=64,
-                kernel_size=3,
-                padding=1,
-                stride=1,
-            ),
-            # output 28 x 64
-            nn.BatchNorm1d(64),
-            nn.MaxPool1d(kernel_size=3,stride=2)  # 64 x 32
-        )
-
-        self.conv2 = nn.Sequential(
-            nn.LeakyReLU(),
-            nn.Conv1d(
-                in_channels=64,
-                out_channels=128,
-                kernel_size=3,
-                padding=1,
-                stride=1
-            ),  # 32 x 21
-            nn.BatchNorm1d(128),
-
-            nn.LeakyReLU(),
-            nn.Conv1d(
-                in_channels=128,
-                out_channels=128,
-                kernel_size=3,
-                padding=1,
-                stride=1
-            ),  # 32 x 21
-            nn.BatchNorm1d(128),
-
-            nn.Conv1d(
-                in_channels=128,
-                out_channels=128,
-                kernel_size=3,
-                padding=1,
-                stride=1
-            ),  # 32 x 21
-            nn.BatchNorm1d(128),
-
-            nn.MaxPool1d(kernel_size=2)  # 128 x 16
-        )
-
-
-        self.out1 = nn.Sequential(
-            nn.LeakyReLU(),
+        self.out = nn.Sequential(
             nn.Dropout(),
-            nn.Linear(1920, 512),
-            nn.Tanh(),
-            nn.Dropout(),
-            nn.Linear(512, 512),
-            nn.Tanh(),  #  use tanh as activity function next to the softmax
-            nn.Dropout(),
-            nn.Linear(512, 69),
-            nn.Softmax(),
-        )
+            nn.LeakyReLU(),
+            nn.Linear(256, 69),
 
+        )
 
 
     def forward(self, x):
@@ -99,11 +35,8 @@ class CNN(nn.Module):
         :param encode_mode: set True if just need the feature vector
         :return:
         """
-        x = self.conv1(x)
-        x = self.conv2(x)
-        # x = self.conv3(x)
-        x = x.view(x.size(0), -1)
-        x = self.out1(x)
+        x = self.resnet(x)
+        x = self.out(x)
         return x
 
 
@@ -138,7 +71,7 @@ class CNN(nn.Module):
               test_result_output_func=test_result_output,
               cuda_mode = 0,
               print_inter=2,
-              val_inter=30,
+              val_inter=20,
               scheduler_step_inter=70
               )
 
@@ -156,15 +89,6 @@ class CNN(nn.Module):
         self.load_state_dict(torch.load(target))
 
 
-
-
-
-def get_max_index(tensor):
-    # print('置信度')
-    # print(tensor.data.float()[0])
-    tensor = torch.max(tensor, dim=1)[1]
-    # 对矩阵延一个固定方向取最大值
-    return torch.squeeze(tensor).data.int()
 
 def test_result_output(result_list, epoch, loss):
     test_result = {}

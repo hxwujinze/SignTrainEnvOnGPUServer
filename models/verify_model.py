@@ -5,14 +5,16 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from models.make_resnet import my_resnet
+
 # CNN: input len -> output len
 # Lout=floor((Lin+2∗padding−dilation∗(kernel_size−1)−1)/stride+1)
 
 
 WEIGHT_DECAY = 0.000002
-BATCH_SIZE = 64
-LEARNING_RATE = 0.0003
-EPOCH = 400
+BATCH_SIZE = 128
+LEARNING_RATE = 0.001
+EPOCH = 200
 
 class SiameseNetwork(nn.Module):
     def __init__(self, train=True):
@@ -28,80 +30,17 @@ class SiameseNetwork(nn.Module):
             self.status = 'eval'
 
 
-        self.coding_model = nn.Sequential(
-            nn.Conv1d(  # 14 x 64
-                in_channels=14,
-                out_channels=64,
-                kernel_size=3,
-                padding=1,
-                stride=1,
-            ),  # 32 x 64
-            # 通常插入在激活函数和FC层之间 对神经网络的中间参数进行normalization
-            nn.BatchNorm1d(64),  # 32 x 64
-            nn.LeakyReLU(),
+        self.coding_model = my_resnet()
 
-            nn.Conv1d(  # 14 x 64
-                in_channels=64,
-                out_channels=64,
-                kernel_size=3,
-                padding=1,
-                stride=1,
-            ),  # 32 x 64
-            # 通常插入在激活函数和FC层之间 对神经网络的中间参数进行normalization
-            nn.BatchNorm1d(64),  # 32 x 64
-            nn.LeakyReLU(),
-            # only one pooling
-            nn.MaxPool1d(kernel_size=3, stride=2),  # 32 x 21
-
-            nn.Conv1d(
-                in_channels=64,
-                out_channels=128,
-                kernel_size=3,
-                padding=1,
-                stride=1
-            ),  # 40 x 21
-            nn.BatchNorm1d(128),  # 40 x 21
-            nn.LeakyReLU(),
-
-            nn.Conv1d(
-                in_channels=128,
-                out_channels=128,
-                kernel_size=3,
-                padding=1,
-                stride=1
-            ),  # 40 x 21
-            nn.BatchNorm1d(128),  # 40 x 21
-
-            nn.Conv1d(
-                in_channels=128,
-                out_channels=128,
-                kernel_size=3,
-                padding=1,
-                stride=1
-            ),  # 40 x 21
-            nn.BatchNorm1d(128),  # 40 x 21
-            nn.LeakyReLU(),
-
-            nn.MaxPool1d(kernel_size=3, stride=2)
-
-        )
-        # todo output dim is too many  256 may enough
-        self.out = nn.Sequential(
+        self.out = torch.nn.Sequential(
             nn.Dropout(),
             nn.LeakyReLU(),
-            nn.Linear(1920, 1024),
-            nn.Dropout(),
-            nn.LeakyReLU(),
-            nn.Linear(1024, 512),
-            nn.Dropout(),
-            nn.LeakyReLU(),
-            nn.Linear(512, 256),
+            nn.Linear(256, 128),
         )
 
 
     def forward_once(self, x):
         x = self.coding_model(x)
-        x = x.view(x.size(0), -1)
         out = self.out(x)
         return out
 
@@ -148,8 +87,8 @@ class SiameseNetwork(nn.Module):
               test_result_output_func=test_result_output,
               cuda_mode=0,
               print_inter=2,
-              val_inter=30,
-              scheduler_step_inter=60
+              val_inter=20,
+              scheduler_step_inter=50
               )
 
 
