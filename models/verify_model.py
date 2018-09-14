@@ -1,6 +1,4 @@
 # Siamese-Networks
-import os
-import math
 
 import numpy as np
 import torch
@@ -9,17 +7,14 @@ import torch.nn.functional as F
 
 from models.make_resnet import my_resnet
 from models.make_VGG import make_vgg
-from models.CNN_model import CNN
 
 # CNN: input len -> output len
 # Lout=floor((Lin+2∗padding−dilation∗(kernel_size−1)−1)/stride+1)
 
-DATA_DIR_PATH = os.path.join(os.getcwd(), 'data')
 
-
-WEIGHT_DECAY = 0.0000002
+WEIGHT_DECAY = 0.000002
 BATCH_SIZE = 64
-LEARNING_RATE = 0.0003
+LEARNING_RATE = 0.001
 EPOCH = 250
 
 class SiameseNetwork(nn.Module):
@@ -36,33 +31,16 @@ class SiameseNetwork(nn.Module):
             self.status = 'eval'
 
 
-
-        # self.coding_model = my_resnet(layers=[2 ,2], layer_planes=[64, 64])
-        # self.coding_model = load_model_from_classify()
-        self.coding_model = make_vgg(input_chnl=14, layers=[2, 3], layers_chnl=[64, 128])
+        self.coding_model = my_resnet(layers=[2 ,2], layer_planes=[64, 128])
+        # self.coding_model = make_vgg(input_chnl=14, layers=[2, 3], layers_chnl=[64, 128])
 
 
         self.out = torch.nn.Sequential(
             nn.Dropout(),
             nn.LeakyReLU(),
-            nn.Linear(256, 64),
+            nn.Linear(256, 32),
         )
 
-        self._initialize_weights()
-
-    def _initialize_weights(self):
-        for m in self.modules():
-            if isinstance(m, nn.Conv1d):
-                n = m.kernel_size[0] *  m.out_channels
-                m.weight.data.normal_(0, math.sqrt(2. / n))
-                if m.bias is not None:
-                    m.bias.data.zero_()
-            elif isinstance(m, nn.BatchNorm1d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
-            elif isinstance(m, nn.Linear):
-                m.weight.data.normal_(0, 0.01)
-                m.bias.data.zero_()
 
     def forward_once(self, x):
         x = self.coding_model(x)
@@ -112,23 +90,12 @@ class SiameseNetwork(nn.Module):
               data_set=data_set,
               data_loader=data_loader,
               test_result_output_func=test_result_output,
-              cuda_mode=0,
+              cuda_mode=1,
               print_inter=2,
               val_inter=25,
-              scheduler_step_inter=40
+              scheduler_step_inter=60
               )
 
-
-def load_model_from_classify():
-    files = os.listdir(DATA_DIR_PATH)
-    for each in files:
-        if each.startswith('cnn') and each.endswith('.pkl'):
-            each = os.path.join(DATA_DIR_PATH, each)
-            coding_model = CNN()
-            coding_model.load_state_dict(torch.load(each))
-            coding_model = coding_model.convs
-            print('load '+ each)
-            return coding_model
 
 def test_result_output(result_list, epoch, loss):
     same_arg = []

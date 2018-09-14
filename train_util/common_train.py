@@ -5,7 +5,6 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 from torch.utils.data import dataloader as DataLoader
-import torch.nn.functional as F
 
 import numpy as np
 
@@ -64,9 +63,9 @@ def train(model: nn.Module,
         for epoch in range(EPOCH + 1):
             loss_his = []
             if epoch % curr_step_inter == 0 and epoch != 0:
-                curr_step_inter = int(curr_step_inter )
+                curr_step_inter = int(curr_step_inter * 2)
                 exp_lr_scheduler.step()
-            if (epoch % int(scheduler_step_inter*1.6) ) == 0 and \
+            if (epoch % int(scheduler_step_inter*2.4) ) == 0 and \
                 epoch != 0 and data_loader['train'].batch_size < 512:
 
                     data_loader['train'] = DataLoader.DataLoader(data_loader['train'].dataset,
@@ -118,21 +117,16 @@ def train(model: nn.Module,
                 model.cpu()
                 # 转换为求值模式
                 test_result_list = []
-                cost_time = []
                 for test_x, target_y in data_loader['test']:
                     if model_name.startswith("cnn"):
                         test_x = test_x.cpu()
                     else:
                         test_x = [each.cpu() for each in test_x]
                     target_y = target_y.cpu()
-
-                    start = time.clock()
                     if model_name.startswith("cnn"):
                         test_output = model(test_x).cpu()
                     else:
                         test_output = model(*test_x)
-                    cost_time.append(time.clock() - start)
-
 
                     # in cnn model get max probability category label and ground-truth label
                     # in verify model get dissimilarities ground-truth result
@@ -145,8 +139,7 @@ def train(model: nn.Module,
 
                     target_y = target_y.item()  # new style of get value in tensor
                     test_result_list.append((target_y, test_output))
-                print("cost_time: ")
-                print(np.mean(np.array(cost_time)))
+
                 accuracy_res = test_result_output_func(test_result_list, epoch=epoch, loss=loss_val)
                 model.train()
                 if cuda_mode is not None:
@@ -182,8 +175,7 @@ def train(model: nn.Module,
 
 def get_max_index(tensor):
     # print('置信度')
-    # print(list(F.softmax(tensor, dim=1)))
-
+    # print(list(tensor))
 
     tensor = torch.max(tensor, dim=1)[1]
     # 对矩阵延一个固定方向取最大值
