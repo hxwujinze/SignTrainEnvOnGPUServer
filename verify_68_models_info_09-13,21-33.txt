@@ -1,0 +1,52 @@
+data_set_size:37429
+****************************epoch: 250
+loss: 0.3364785552126556
+progress: 100.00 lr: 0.000100diff info 
+    diff max: 3.549942 min: 0.029234, mean: 1.851677 var: 0.565967
+     same max: 2.016147 min: 0.000006, mean: 0.243474, same_var 0.063105loss: 0.336479
+Epoch: 250
+SiameseNetwork(
+  (coding_model): VGGNet(
+    (blocks): Sequential(
+      (0): VGGBlock(
+        (block): Sequential(
+          (0): Sequential(
+            (0): LeakyReLU(negative_slope=0.01)
+            (1): Conv1d(14, 64, kernel_size=(3,), stride=(1,), padding=(1,))
+            (2): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+          (1): Sequential(
+            (0): LeakyReLU(negative_slope=0.01)
+            (1): Conv1d(64, 64, kernel_size=(3,), stride=(1,), padding=(1,))
+            (2): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+          (2): MaxPool1d(kernel_size=3, stride=2, padding=0, dilation=1, ceil_mode=False)
+        )
+      )
+      (1): VGGBlock(
+        (block): Sequential(
+          (0): Sequential(
+            (0): LeakyReLU(negative_slope=0.01)
+            (1): Conv1d(64, 64, kernel_size=(3,), stride=(1,), padding=(1,))
+            (2): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+          (1): Sequential(
+            (0): LeakyReLU(negative_slope=0.01)
+            (1): Conv1d(64, 64, kernel_size=(3,), stride=(1,), padding=(1,))
+            (2): BatchNorm1d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          )
+          (2): MaxPool1d(kernel_size=3, stride=2, padding=0, dilation=1, ceil_mode=False)
+        )
+      )
+    )
+    (out): AdaptiveAvgPool1d(output_size=2)
+  )
+  (out): Sequential(
+    (0): Dropout(p=0.5)
+    (1): LeakyReLU(negative_slope=0.01)
+    (2): Linear(in_features=128, out_features=128, bias=True)
+    (3): Dropout(p=0.5)
+    (4): LeakyReLU(negative_slope=0.01)
+    (5): Linear(in_features=128, out_features=32, bias=True)
+  )
+)
