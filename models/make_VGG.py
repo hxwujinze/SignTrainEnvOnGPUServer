@@ -67,7 +67,6 @@ class VGGNet(nn.Module):
         self.out = nn.AdaptiveAvgPool1d(2)
 
 
-
     def forward(self, x):
         x = self.blocks(x)
         x = self.out(x)
