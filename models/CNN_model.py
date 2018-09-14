@@ -1,5 +1,4 @@
 import  os
-import math
 
 
 import torch
@@ -20,15 +19,16 @@ class CNN(nn.Module):
         nn.Module.__init__(self)
 
         # self.convs = my_resnet(layers=[2 ,2], layer_planes=[64, 128])
-        self.convs = make_vgg(input_chnl=14, layers=[2, 3], layers_chnl=[32, 64])
+        self.convs = make_vgg(input_chnl=14, layers=[2, 3], layers_chnl=[64, 128])
 
 
         self.out = nn.Sequential(
             nn.Dropout(),
             nn.LeakyReLU(),
-            nn.Linear(128, 69),
+            nn.Linear(256, 69),
 
         )
+        self._initialize_weights()
 
     def _initialize_weights(self):
         for m in self.modules():
@@ -43,7 +43,6 @@ class CNN(nn.Module):
             elif isinstance(m, nn.Linear):
                 m.weight.data.normal_(0, 0.01)
                 m.bias.data.zero_()
-
 
     def forward(self, x):
         """
