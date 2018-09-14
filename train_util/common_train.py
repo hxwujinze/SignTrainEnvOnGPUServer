@@ -183,8 +183,6 @@ def train(model: nn.Module,
 def get_max_index(tensor):
     # print('置信度')
     # print(list(F.softmax(tensor, dim=1)))
-
-
     tensor = torch.max(tensor, dim=1)[1]
     # 对矩阵延一个固定方向取最大值
     return torch.squeeze(tensor).data.int()

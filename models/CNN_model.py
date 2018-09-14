@@ -142,6 +142,13 @@ def test_result_output(result_list, epoch, loss):
     print(accuracy_res)
     return accuracy_res
 
+def get_max_index(tensor):
+    # print('置信度')
+    tensor = F.softmax(tensor, dim=1)
+    tensor = torch.max(tensor, dim=1)[1]
+    # 对矩阵延一个固定方向取最大值
+    return torch.squeeze(tensor).data.int()
+
 
 def output_len(Lin, padding, kernel_size, stride):
     Lout = (Lin + 2 * padding - (kernel_size - 1) - 1) / stride + 1

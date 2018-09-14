@@ -37,15 +37,18 @@ class SiameseNetwork(nn.Module):
 
 
 
-        # self.coding_model = my_resnet(layers=[2 ,2], layer_planes=[64, 64])
+        self.coding_model = my_resnet(layers=[2 ,3], layer_planes=[64, 128])
         # self.coding_model = load_model_from_classify()
-        self.coding_model = make_vgg(input_chnl=14, layers=[2, 3], layers_chnl=[64, 128])
+        # self.coding_model = make_vgg(input_chnl=14, layers=[2, 3], layers_chnl=[64, 128])
 
 
         self.out = torch.nn.Sequential(
             nn.Dropout(),
             nn.LeakyReLU(),
-            nn.Linear(256, 64),
+            nn.Linear(256, 128),
+            nn.Dropout(),
+            nn.LeakyReLU(),
+            nn.Linear(128, 32),
         )
 
         self._initialize_weights()
@@ -115,7 +118,7 @@ class SiameseNetwork(nn.Module):
               cuda_mode=0,
               print_inter=2,
               val_inter=25,
-              scheduler_step_inter=40
+              scheduler_step_inter=50
               )
 
 
@@ -174,7 +177,7 @@ class ContrastiveLoss(torch.nn.Module):
     Based on: http://yann.lecun.com/exdb/publis/pdf/hadsell-chopra-lecun-06.pdf
     """
 
-    def __init__(self, margin=2.0):
+    def __init__(self, margin=4.0):
         super(ContrastiveLoss, self).__init__()
         self.margin = margin
 
