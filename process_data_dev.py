@@ -814,9 +814,10 @@ def generate_verify_vector():
             data_orderby_class[each_label].append(each_data)
 
 
-    verifier = SiameseNetwork(train=False)
-    verifier = load_model_param(verifier, 'verify')
+    verifier = load_model_param('verify')
     verifier.double()
+    verifier.status = 'eval'
+    verifier.eval()
     verify_vectors = {}
     for each_sign in data_orderby_class.keys():
         sign_data = data_orderby_class[each_sign]
@@ -852,14 +853,14 @@ def generate_verify_vector():
     pickle.dump(verify_vectors, file_)
     file_.close()
 
-def load_model_param(model, model_type_name):
+def load_model_param(model_type_name):
     files = os.listdir(DATA_DIR_PATH)
     for file_ in files:
         file_name_split = os.path.splitext(file_)
         if file_name_split[1] == '.pkl' and file_name_split[0].startswith(model_type_name):
             print('load model params of %s' % file_)
             file_ = os.path.join(DATA_DIR_PATH, file_)
-            model.load_state_dict(torch.load(file_))
+            model = torch.load(file_)
             model.eval()
             return model
 
@@ -1010,7 +1011,7 @@ def main():
     # data_set = load_feed_back_data()[sign_id]
 
     # resort_data(['0816-*',])
-    statistics_data('cleaned_data')
+    # statistics_data('cleaned_data')
 
 
     # print_train_data(sign_id=1,
@@ -1030,7 +1031,7 @@ def main():
     # pickle_train_data_new()
 
     # 生成验证模型的参照系向量
-    # generate_verify_vector()
+    generate_verify_vector()
 
     # 从recognized data history中取得数据
     # online_data = load_online_processed_data()

@@ -1,16 +1,16 @@
 import  os
-
+import math
 
 import torch
 import torch.nn as nn
 import torch.utils.data.dataloader as DataLoader
 
-from models.make_resnet import my_resnet
-from models.make_VGG import make_vgg
+# from models.make_resnet import my_resnet
+# from models.make_VGG import make_vgg
 
 
 LEARNING_RATE = 0.0001
-EPOCH = 130
+EPOCH = 100
 BATCH_SIZE = 128
 WEIGHT_DECAY = 0.000005
 
@@ -84,7 +84,7 @@ class CNN(nn.Module):
               optimizer=optimizer,
               exp_lr_scheduler=lr_scheduler,
               loss_func=loss_func,
-              save_dir='.',
+              save_dir='./params',
               data_set=data_set,
               data_loader=data_loader,
               test_result_output_func=test_result_output,
@@ -153,3 +153,89 @@ def get_max_index(tensor):
 def output_len(Lin, padding, kernel_size, stride):
     Lout = (Lin + 2 * padding - (kernel_size - 1) - 1) / stride + 1
     return Lout
+
+
+
+# --------------make VGG--------------
+# to avoid package import process. move all code into one file
+
+class VGGBlock(nn.Module):
+    def __init__(self, input_chnl, output_chnl, layers):
+        super(VGGBlock, self).__init__()
+        layers_to_add = []
+        for each in range(layers):
+
+            if each == 0:
+                tmp_in = input_chnl
+            else:
+                tmp_in = output_chnl
+
+            layer = nn.Sequential(
+                nn.LeakyReLU(),
+                nn.Conv1d(
+                    in_channels=tmp_in,
+                    out_channels=output_chnl,
+                    kernel_size=3,
+                    stride=1,
+                    padding=1
+                ),
+                nn.BatchNorm1d(output_chnl)
+            )
+            layers_to_add.append(layer)
+
+            if each == layers-1:
+                layers_to_add.append(nn.MaxPool1d(
+                                        kernel_size=3,
+                                        stride=2,
+                                    ))
+
+        self.block = nn.Sequential(
+            *layers_to_add
+        )
+
+
+    def forward(self, x):
+        x = self.block(x)
+        return x
+
+
+class VGGNet(nn.Module):
+    def __init__(self, layers, layer_chnl, input_plane):
+        """
+        生成VGGNet
+        :param block: 用什么样的block？
+        :param layers: block里面放几层？
+        :param layer_chnl: the output channel in each block
+        """
+
+        if len(layers) != len(layer_chnl):
+            raise Exception('the length of layers cnt args and planes args should same')
+        super(VGGNet, self).__init__()
+
+
+        block_to_add = []
+        for each in range(len(layers)):
+            if each == 0:
+                input_chnl = input_plane
+            else:
+                input_chnl = layer_chnl[each-1]
+            block_to_add.append(self.__make_layer(input_chnl, layer_chnl[each], layers[each]))
+        self.blocks = nn.Sequential(*block_to_add)
+        self.out = nn.AdaptiveAvgPool1d(2)
+
+
+    def forward(self, x):
+        x = self.blocks(x)
+        x = self.out(x)
+        x =  x.view(x.size(0), -1)
+        return x
+
+
+    @staticmethod
+    def __make_layer(input_plane, output_plane, layers):
+        return VGGBlock(input_chnl=input_plane, output_chnl=output_plane, layers=layers)
+
+
+
+def make_vgg(input_chnl, layers, layers_chnl):
+    return VGGNet(input_plane=input_chnl, layers=layers, layer_chnl=layers_chnl)
