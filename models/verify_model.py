@@ -67,8 +67,7 @@ class SiameseNetwork(nn.Module):
         nn.Module.train(self, mode)
         self.status = 'train'
 
-    def eval(self):
-        nn.Module.eval(self)
+    def single_output():
         self.status = 'eval'
 
     def exc_train(self):

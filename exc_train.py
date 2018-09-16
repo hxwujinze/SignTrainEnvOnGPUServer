@@ -7,7 +7,7 @@ import torch
 if __name__ == "__main__":
 
 
-    m = CNN_model.CNN()
-    m.exc_train()
-    m = SN.SiameseNetwork()
+    # m = CNN_model.CNN()
+    # m.exc_train()
+    m = SN.SiameseNetwork(True)
     m.exc_train()
