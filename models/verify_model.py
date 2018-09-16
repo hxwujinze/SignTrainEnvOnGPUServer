@@ -38,10 +38,8 @@ class SiameseNetwork(nn.Module):
 
 
         self.out = torch.nn.Sequential(
-            nn.Dropout(),
             nn.LeakyReLU(),
             nn.Linear(256, 128),
-            nn.Dropout(),
             nn.LeakyReLU(),
             nn.Linear(128, 32),
         )

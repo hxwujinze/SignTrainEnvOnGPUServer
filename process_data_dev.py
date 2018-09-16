@@ -1010,7 +1010,7 @@ def main():
     # data_set = load_feed_back_data()[sign_id]
 
     # resort_data(['0816-*',])
-    # statistics_data('cleaned_data')
+    statistics_data('cleaned_data')
 
 
     # print_train_data(sign_id=1,
@@ -1030,7 +1030,7 @@ def main():
     # pickle_train_data_new()
 
     # 生成验证模型的参照系向量
-    generate_verify_vector()
+    # generate_verify_vector()
 
     # 从recognized data history中取得数据
     # online_data = load_online_processed_data()
