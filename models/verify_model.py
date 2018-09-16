@@ -13,8 +13,8 @@ from models.make_VGG import make_vgg
 
 
 WEIGHT_DECAY = 0.000002
-BATCH_SIZE = 64
-LEARNING_RATE = 0.001
+BATCH_SIZE = 128
+LEARNING_RATE = 0.0003
 EPOCH = 250
 
 class SiameseNetwork(nn.Module):
@@ -32,18 +32,16 @@ class SiameseNetwork(nn.Module):
 
 
 
-        self.coding_model = my_resnet(layers=[2 ,3], layer_planes=[64, 128])
+        # self.coding_model = my_resnet(layers=[2 ,2], layer_planes=[64, 128])
         # self.coding_model = load_model_from_classify()
-        # self.coding_model = make_vgg(input_chnl=14, layers=[2, 3], layers_chnl=[64, 128])
+        self.coding_model = make_vgg(input_chnl=14, layers=[2, 3], layers_chnl=[64, 128])
 
 
         self.out = torch.nn.Sequential(
-            nn.Dropout(),
             nn.LeakyReLU(),
             nn.Linear(256, 128),
-            nn.Dropout(),
             nn.LeakyReLU(),
-            nn.Linear(128, 32),
+            nn.Linear(128, 128),
         )
 
 
@@ -91,7 +89,7 @@ class SiameseNetwork(nn.Module):
               optimizer=optimizer,
               exp_lr_scheduler=lr_scheduler,
               loss_func=loss_func,
-              save_dir='.',
+              save_dir='./params',
               data_set=data_set,
               data_loader=data_loader,
               test_result_output_func=test_result_output,
@@ -122,20 +120,28 @@ def test_result_output(result_list, epoch, loss):
     diff_min = np.min(diff_arg)
     diff_max = np.max(diff_arg)
     diff_var = np.var(diff_arg)
+    diff_1st = np.percentile(diff_arg, 10)
+    diff_med = np.percentile(diff_arg, 50)
+    diff_2nd = np.percentile(diff_arg, 90)
 
     same_max = np.max(same_arg)
     same_min = np.min(same_arg)
     same_var = np.var(same_arg)
+    same_1st = np.percentile(same_arg, 10)
+    same_med = np.percentile(same_arg, 50)
+    same_2nd = np.percentile(same_arg, 90)
 
     same_arg = np.mean(same_arg, axis=-1)
     diff_arg = np.mean(diff_arg, axis=-1)
     diff_res = "****************************"
-    diff_res += "epoch: %s\nloss: %s\nprogress: %.2f lr: %f" % \
+    diff_res += "epoch: %s\nloss: %s\nprogress: %.2f lr: %f\n" % \
                         (epoch, loss, 100 * epoch / EPOCH, LEARNING_RATE)
-    diff_res += "diff info \n    diff max: %f min: %f, mean: %f var: %f\n " % \
-                                      (diff_max, diff_min, diff_arg, diff_var) + \
-               "    same max: %f min: %f, mean: %f, same_var %f" % \
-                            (same_max, same_min, same_arg, same_var)
+    diff_res += "diff info \n    max: %f min: %f, mean: %f var: %f\n " % \
+                                      (diff_max, diff_min, diff_arg, diff_var)  \
+              + "    1st: %f med: %f 2nd: %f\n" % (diff_1st, diff_med, diff_2nd) \
+              + "same info\n    max: %f min: %f, mean: %f, same_var %f\n" % \
+                                 (same_max, same_min, same_arg, same_var)\
+              + "    1st: %f med: %f 2nd: %f" % (same_1st, same_med, same_2nd)
     print(diff_res)
     return diff_res
 
@@ -146,7 +152,7 @@ class ContrastiveLoss(torch.nn.Module):
     Based on: http://yann.lecun.com/exdb/publis/pdf/hadsell-chopra-lecun-06.pdf
     """
 
-    def __init__(self, margin=4.0):
+    def __init__(self, margin=2.0):
         super(ContrastiveLoss, self).__init__()
         self.margin = margin
 

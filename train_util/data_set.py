@@ -94,7 +94,7 @@ class SiameseNetworkTrainDataSet:
 
 
     def __len__(self):
-        return self.data_len
+        return self.data_len*4
 
 
 def generate_data_set(split_ratio, data_set_type):

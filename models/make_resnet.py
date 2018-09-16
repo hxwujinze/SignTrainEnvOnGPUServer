@@ -112,7 +112,7 @@ class ResNet(nn.Module):
                                bias=False)
         self.bn1 = nn.BatchNorm1d(64)
         self.relu = nn.ReLU(inplace=True)
-        self.maxpool = nn.MaxPool1d(kernel_size=3, stride=2, padding=1)
+        # self.maxpool = nn.MaxPool1d(kernel_size=3, stride=2, padding=1)
 
         block_to_add = []
         for each in range(len(layers)):
@@ -156,7 +156,7 @@ class ResNet(nn.Module):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
-        x = self.maxpool(x)
+        # x = self.maxpool(x)
 
         x = self.blocks(x)
 

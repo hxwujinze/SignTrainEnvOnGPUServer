@@ -1,5 +1,5 @@
 import  os
-
+import math
 
 import torch
 import torch.nn as nn
@@ -23,7 +23,6 @@ class CNN(nn.Module):
 
 
         self.out = nn.Sequential(
-            nn.Dropout(),
             nn.LeakyReLU(),
             nn.Linear(256, 69),
 
@@ -84,7 +83,7 @@ class CNN(nn.Module):
               optimizer=optimizer,
               exp_lr_scheduler=lr_scheduler,
               loss_func=loss_func,
-              save_dir='.',
+              save_dir='./params',
               data_set=data_set,
               data_loader=data_loader,
               test_result_output_func=test_result_output,
