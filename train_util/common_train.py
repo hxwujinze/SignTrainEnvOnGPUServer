@@ -38,7 +38,7 @@ def train(model: nn.Module,
     :param data_loader: torch的data loader
     :param test_result_output_func: how to print the test result after test
     :param save_dir: log及model param保存位置
-    :param cuda_mode: use which GPU for train ?
+    :param cuda_mode: use which GPU for train
                       give GPU ID, if is None use CPU
     :param print_inter: 输出loss的epoch间隔
     :param val_inter: 进行测试的epoch间隔
@@ -162,7 +162,7 @@ def train(model: nn.Module,
     end_time = time.strftime('%m-%d,%H-%M', time.localtime(end_time_raw))
     model = model.cpu()
     # save all model info
-    torch.save(model, os.path.join(save_dir, '%s_model%s.pkl' % (model_name, end_time)))
+    torch.save(model.state_dict(), os.path.join(save_dir, '%s_model%s.pkl' % (model_name, end_time)))
 
     file = open(os.path.join(save_dir, '%s_models_info_%s.txt' % (model_name,end_time)), 'w')
     info = 'data_set_size:%d\n' % len(data_set['train']) + \

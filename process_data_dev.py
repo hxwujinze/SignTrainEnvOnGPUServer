@@ -16,7 +16,7 @@ import process_data
 
 import matplotlib.pyplot as plt
 # from models.CNN_model import CNN, get_max_index
-from models.verify_model import SiameseNetwork
+from algorithm_models.verify_model import SiameseNetwork
 from process_data import feature_extract_single, feature_extract, TYPE_LEN, \
     append_single_data_feature, append_feature_vector, wavelet_trans
 
