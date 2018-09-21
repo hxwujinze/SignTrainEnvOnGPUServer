@@ -53,7 +53,6 @@ class SiameseNetworkTrainDataSet:
         :return:
         """
 
-        # todo check is it work correctly ????
 
         x1_ = random.choice(self.data)
         x1_label = x1_[1]
@@ -73,8 +72,6 @@ class SiameseNetworkTrainDataSet:
                0.0 if get_same else 1.0
 
 
-        # return (x1_, x2_), \
-        #        np.array([0 if get_same else 1], dtype=np.float32)
 
     def look_input_data(self):
         """
@@ -97,7 +94,52 @@ class SiameseNetworkTrainDataSet:
         return self.data_len
 
 
-def generate_data_set(split_ratio, data_set_type):
+class TripletLossDataSet(torch.utils.data.Dataset):
+    def __len__(self):
+        return self.data_len // self.batch_size
+
+    def __getitem__(self, index):
+        """
+        iter the batch by the index
+        every getitem method return a batch
+        :param index:
+        :return:
+        """
+        data = []
+        labels = []
+        for each_cate in range(self.class_cnt):
+            try:
+                data.extend(random.sample(self.data_dict[each_cate], self.batch_k))
+                labels.extend([each_cate for _ in range(self.batch_k)])
+            except:
+                continue
+            # print(random.sample(self.data_dict[each_cate],self.batch_k))
+        data = np.array(data)
+        return torch.from_numpy(data).float(), \
+               torch.from_numpy(np.array(labels, dtype=int))
+
+    def __init__(self, data, batch_k):
+        """
+        spilt data set into set of each categories as dict
+        :param data:
+        """
+        torch.utils.data.Dataset.__init__(self)
+        self.data_len = len(data)
+        self.class_cnt = 69
+        self.batch_k = batch_k
+        self.batch_size = self.class_cnt * self.batch_k
+        self.data = data
+        self.data_dict = {}
+        for each_data, each_label in data:
+            each_label = int(each_label)
+            if self.data_dict.get(each_label) is None:
+                self.data_dict[each_label] = [each_data]
+            else:
+                self.data_dict[each_label].append(each_data)
+
+
+
+def generate_data_set(split_ratio, data_set_type, batch_k):
     """
     generate the train/test data set
     split the data set according to split ratio
@@ -105,6 +147,7 @@ def generate_data_set(split_ratio, data_set_type):
     :param split_ratio: how much data save as test data, or train data
     :param data_set_type: which train data set type you load up in
                           pass the class into that
+    :param batch_k: if the dataset for triplet loss, need to provide batch_k
     :return: dict {
         'train': train DataSet,
         'test': test DataSet
@@ -123,8 +166,15 @@ def generate_data_set(split_ratio, data_set_type):
                           data_set[each][1] )
     train_data = data_set[int(len(data_set)*split_ratio) :]
     test_data = data_set[: int(len(data_set)*split_ratio)]
-    return {
-        'train': data_set_type(train_data),
-        'test': data_set_type(test_data)
-    }
+
+    if data_set_type is not TripletLossDataSet:
+        return {
+            'train': data_set_type(train_data),
+            'test': data_set_type(test_data)
+        }
+    else:
+        return {
+            'train': data_set_type(train_data, batch_k),
+            'test': SiameseNetworkTrainDataSet(test_data)
+        }
 

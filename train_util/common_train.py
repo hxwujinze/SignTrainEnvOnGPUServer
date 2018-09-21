@@ -65,13 +65,14 @@ def train(model: nn.Module,
             if epoch % curr_step_inter == 0 and epoch != 0:
                 curr_step_inter = int(curr_step_inter * 1.5)
                 exp_lr_scheduler.step()
-            if (epoch % int(scheduler_step_inter*1.8) ) == 0 and \
-                epoch != 0 and data_loader['train'].batch_size < 512:
-
-                    data_loader['train'] = DataLoader.DataLoader(data_loader['train'].dataset,
-                                                                 shuffle=True,
-                                                                 batch_size=data_loader['train'].batch_size * 2,
-                                                                 num_workers=1)
+            # disable the size up the batch size
+            # if (epoch % int(scheduler_step_inter*1.8) ) == 0 and \
+            #     epoch != 0 and data_loader['train'].batch_size < 512:
+            #
+            #         data_loader['train'] = DataLoader.DataLoader(data_loader['train'].dataset,
+            #                                                      shuffle=True,
+            #                                                      batch_size=data_loader['train'].batch_size * 2,
+            #                                                      num_workers=1)
 
 
             for batch_x, batch_y in data_loader['train']:
@@ -80,7 +81,6 @@ def train(model: nn.Module,
                 else:
                     batch_x = [each.cpu() for each in batch_x]
                 batch_y = batch_y.cpu()
-
 
                 if cuda_mode is not None:
                     if model_name.startswith("cnn"):
@@ -98,7 +98,8 @@ def train(model: nn.Module,
                 else:
                     batch_out = model(*batch_x)
                     batch_y = batch_y.float()
-                    loss = loss_func(batch_out[0], batch_out[1], batch_y)
+
+                    loss = loss_func(batch_out)
 
                 loss_his.append(loss.item())
                 optimizer.zero_grad()

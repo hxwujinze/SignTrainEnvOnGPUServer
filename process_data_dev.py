@@ -781,11 +781,6 @@ def cnn_recognize_test(online_data):
         print('time cost : cnn %f, verify %f' % (cnn_cost_time, verifier_cost_time))
 
 
-
-
-
-
-
 def generate_verify_vector():
     """
     根据所有训练数据生成reference vector 并保存至文件
@@ -813,11 +808,9 @@ def generate_verify_vector():
         else:
             data_orderby_class[each_label].append(each_data)
 
-
-    verifier = load_model_param('verify')
-    verifier.double()
-    verifier.status = 'eval'
-    verifier.eval()
+    verifier = SiameseNetwork(train=False)
+    load_model_param(verifier, 'verify')
+    verifier.single_output()
     verify_vectors = {}
     for each_sign in data_orderby_class.keys():
         sign_data = data_orderby_class[each_sign]
@@ -853,16 +846,17 @@ def generate_verify_vector():
     pickle.dump(verify_vectors, file_)
     file_.close()
 
-def load_model_param(model_type_name):
-    files = os.listdir(DATA_DIR_PATH)
-    for file_ in files:
-        file_name_split = os.path.splitext(file_)
-        if file_name_split[1] == '.pkl' and file_name_split[0].startswith(model_type_name):
-            print('load model params of %s' % file_)
-            file_ = os.path.join(DATA_DIR_PATH, file_)
-            model = torch.load(file_)
-            model.eval()
-            return model
+def load_model_param(model, model_name):
+    for root, dirs, files in os.walk(DATA_DIR_PATH):
+        for file_ in files:
+            file_name_split = os.path.splitext(file_)
+            if file_name_split[1] == '.pkl' and file_name_split[0].startswith(model_name):
+                print('load model params %s' % file_name_split[0])
+                file_ = os.path.join(DATA_DIR_PATH, file_)
+                model.load_state_dict(torch.load(file_))
+                model.double()
+                model.eval()
+                return model
 
 # GESTURES_TABLE = ['朋友', '家', '回', '去', '迟到', '交流', '联系', '客气', '再见', '劳驾', '谢谢',
 #                   '对不起', '没关系', '起来', '帮助', '中国', '时间', '时差', '天', '延期', '早上', '上午',
