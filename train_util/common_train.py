@@ -99,7 +99,7 @@ def train(model: nn.Module,
                     batch_out = model(*batch_x)
                     batch_y = batch_y.float()
 
-                    loss = loss_func(batch_out)
+                    loss = loss_func(batch_out[0], batch_out[1], batch_y)
 
                 loss_his.append(loss.item())
                 optimizer.zero_grad()

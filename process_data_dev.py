@@ -11,6 +11,7 @@ import numpy as np
 import torch
 from torch.autograd import Variable
 import torch.nn.functional as F
+from  sklearn.metrics.pairwise import paired_distances
 
 import process_data
 
@@ -811,18 +812,32 @@ def generate_verify_vector():
     verifier = SiameseNetwork(train=False)
     load_model_param(verifier, 'verify')
     verifier.single_output()
-    verify_vectors = {}
+    reference_vector = {}
     for each_sign in data_orderby_class.keys():
         sign_data = data_orderby_class[each_sign]
-        vectors = []
         print('process sign %d ' % each_sign)
-        for each_cap in sign_data:
-            each_cap = torch.from_numpy(np.array([each_cap])).double()
-            vector = verifier(each_cap)
-            vector = vector.data.numpy()[0]
-            vectors.append(vector)
-            # print('verify cost time %f' % (time.clock() - start))
-        verify_vectors[each_sign] = vectors
+        sign_data = torch.from_numpy(np.array(sign_data)).double()
+        vectors = verifier(sign_data)
+        reference_vector[each_sign] = torch.mean(vectors,dim=0 )
+
+        compare_vectors = list(vectors)
+        if len(compare_vectors) > 600:
+            compare_vectors = random.sample(compare_vectors, 600)
+
+        dis_values = []
+        for each in compare_vectors:
+            # print(each)
+            # print(reference_vectors[each_sign])
+            dis_values.append(
+                torch.pow(
+                    torch.sum(torch.pow(each-reference_vector[each_sign], 2))
+                    ,1/2
+                ).data.item()
+            )
+        ref_threshold = np.mean(np.array(dis_values)) * 1.5
+        print(ref_threshold)
+
+        reference_vector[each_sign] = (reference_vector[each_sign], ref_threshold)
 
 
 
@@ -831,19 +846,15 @@ def generate_verify_vector():
     if is_show == 'y':
         fig = plt.figure()
         fig.add_subplot(111, title='verify vectors')
-
-    for each_sign in verify_vectors.keys():
-        verify_vector_mean = np.mean(np.array(verify_vectors[each_sign]), axis=0)
-        verify_vectors[each_sign] = verify_vector_mean
-
-    if is_show == 'y':
-        for each_vec in verify_vectors.keys():
-            plt.scatter(range(len(verify_vectors[each_vec])), verify_vectors[each_vec], marker='.')
+        for each_vec in reference_vector.keys():
+            np_ref_vector = reference_vector[each_vec][0].data.numpy()
+            plt.scatter(range(len(np_ref_vector)), np_ref_vector, marker='.')
             plt.pause(0.01)
         plt.show()
 
+    print(reference_vector)
     file_ = open(os.path.join(DATA_DIR_PATH, 'reference_verify_vector'), 'wb')
-    pickle.dump(verify_vectors, file_)
+    pickle.dump(reference_vector, file_)
     file_.close()
 
 def load_model_param(model, model_name):

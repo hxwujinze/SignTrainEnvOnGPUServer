@@ -13,8 +13,8 @@ from .make_VGG import make_vgg
 # Lout=floor((Lin+2∗padding−dilation∗(kernel_size−1)−1)/stride+1)
 
 
-WEIGHT_DECAY = 0.000002
-BATCH_SIZE = 1
+WEIGHT_DECAY = 0.00001
+BATCH_SIZE = 128
 LEARNING_RATE = 0.0003
 EPOCH = 250
 
@@ -39,6 +39,7 @@ class SiameseNetwork(nn.Module):
 
 
         self.out = torch.nn.Sequential(
+            # nn.Dropout(0.25),
             nn.LeakyReLU(),
             nn.Linear(256, 128),
             nn.LeakyReLU(),
@@ -93,10 +94,10 @@ class SiameseNetwork(nn.Module):
         optimizer = torch.optim.Adam(self.parameters(), lr=LEARNING_RATE)
         lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.1)
 
-        batch_k = 32
-        data_set = generate_data_set(0.06, TripletLossDataSet, batch_k)
+        batch_k = 48
+        data_set = generate_data_set(0.06, SiameseNetworkTrainDataSet, batch_k)
 
-        loss_func = WeightBasedTripleLoss(batch_k)
+        loss_func = ContrastiveLoss()
 
         data_loader = {
             'train': DataLoader.DataLoader(data_set['train'],

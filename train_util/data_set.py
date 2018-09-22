@@ -52,8 +52,6 @@ class SiameseNetworkTrainDataSet:
         :param item:
         :return:
         """
-
-
         x1_ = random.choice(self.data)
         x1_label = x1_[1]
         x1_ = x1_[0]
@@ -91,7 +89,7 @@ class SiameseNetworkTrainDataSet:
 
 
     def __len__(self):
-        return self.data_len
+        return self.data_len*6
 
 
 class TripletLossDataSet(torch.utils.data.Dataset):
