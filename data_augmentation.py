@@ -396,10 +396,10 @@ def main():
     pass
     # read_gesture_table()
     # 存在离群点密集 batch 20    25
-    # data_distribution_statistics(True)
-    clean_all_data()
+    data_distribution_statistics(True)
+    # clean_all_data()
     #clean_data_test(28)
-    # show_data_distribution(13)
+    show_data_distribution(13)
     # clean_data_test(58)
     #data = load_data(sign_id=28)
     #draw_box_plt(data)

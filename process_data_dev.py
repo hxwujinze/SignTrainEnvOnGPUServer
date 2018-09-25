@@ -12,10 +12,10 @@ import torch
 from torch.autograd import Variable
 import torch.nn.functional as F
 from  sklearn.metrics.pairwise import paired_distances
+import matplotlib.pyplot as plt
+
 
 import process_data
-
-import matplotlib.pyplot as plt
 # from models.CNN_model import CNN, get_max_index
 from algorithm_models.verify_model import SiameseNetwork
 from process_data import feature_extract_single, feature_extract, TYPE_LEN, \
@@ -179,9 +179,6 @@ def cut_out_data(data):
             data[each_cap_type][each_data] = data[each_cap_type][each_data][16:144, :]
     return data
 
-from  multiprocessing import Pool
-
-
 def pickle_each_sign_data(data_set):
     raw_data_set = data_set[0]
     each_sign = data_set[1]
@@ -220,7 +217,7 @@ def pickle_train_data_new():
     for each_sign in range(len(GESTURES_TABLE)):
         arg_list.append((data_set[each_sign], each_sign))
 
-    p = Pool(15)
+    p = Pool(25)
     res = p.map(pickle_each_sign_data, arg_list)
 
 
@@ -234,35 +231,43 @@ def pickle_train_data_new():
             except ValueError:
                 print(each_res[1])
 
-
-
     print(overall_data_mat.shape)
     print(len(train_data_set))
 
-    scaler = process_data.DataScaler(DATA_DIR_PATH)
-    
-    scaler.generate_scale_data(overall_data_mat, 'cnn')
-    vectors_name = ['cnn_acc', 'cnn_gyr', 'cnn_emg']
-    vectors_range = ((0, 3), (3, 6), (6, 14))
-    scaler.split_scale_vector('cnn', vectors_name, vectors_range)
+    with open(os.path.join(DATA_DIR_PATH, 'overall_data_mat'), 'w+b') as f:
+        pickle.dump(overall_data_mat, f)
 
-    #scaler.expand_scale_data()
-    scaler.store_scale_data()
+    scaler = init_scaler(overall_data_mat)
 
     normed_data = []
     for each in train_data_set:
-        data_mat = scaler.normalize(each[0], 'cnn')
-        data_mat = np.where(data_mat > 0.00000000001, data_mat, 0)
+        data_mat = scaler.normalize(each[0], 'minmax')
+        data_mat = np.where(abs(data_mat) < 0.0000001, 0, data_mat)
         normed_data.append((data_mat, each[1]))
     train_data_set = normed_data
-
 
 
     with open(os.path.join(DATA_DIR_PATH, 'new_train_data'), 'w+b') as f:
         pickle.dump(train_data_set, f)
 
 
+def init_scaler(overall_data_mat=None):
 
+    if overall_data_mat is None:
+        with open(os.path.join(DATA_DIR_PATH, 'overall_data_mat'), 'r+b') as f:
+            overall_data_mat = pickle.load(f)
+    print(overall_data_mat.shape)
+    scaler = process_data.DataScaler(DATA_DIR_PATH)
+
+    scaler.generate_scale_data(overall_data_mat)
+    vectors_name = ['acc', 'gyr', 'emg']
+    vectors_range = ((0, 3), (3, 6), (6, 14))
+    scaler.split_scale_vector(vectors_name, vectors_range)
+
+    # scaler.expand_scale_data()
+    scaler.store_scale_data()
+
+    return scaler
 
 def pickle_train_data(batch_num, feedback_data=None):
     """
@@ -1033,10 +1038,11 @@ def main():
 
     # 将采集数据转换为输入训练程序的数据格式
     # pickle_train_data(batch_num=87)
-    # pickle_train_data_new()
+    pickle_train_data_new()
+    # init_scaler()
 
     # 生成验证模型的参照系向量
-    generate_verify_vector()
+    # generate_verify_vector()
 
     # 从recognized data history中取得数据
     # online_data = load_online_processed_data()

@@ -27,6 +27,7 @@ class MyDataset(torch_data.Dataset):
 class SiameseNetworkTrainDataSet:
     """
     生成随机的相同或者不同的数据对进行训练
+    data set for contrastive loss
     """
 
     def __init__(self, data):
@@ -93,6 +94,11 @@ class SiameseNetworkTrainDataSet:
 
 
 class TripletLossDataSet(torch.utils.data.Dataset):
+    """
+    data set for triplet loss
+    输出  categories x batch_k 个数据
+    每个category的数据集中在一起
+    """
     def __len__(self):
         return self.data_len // self.batch_size
 
@@ -137,7 +143,7 @@ class TripletLossDataSet(torch.utils.data.Dataset):
 
 
 
-def generate_data_set(split_ratio, data_set_type, batch_k):
+def generate_data_set(split_ratio, data_set_type, batch_k=16):
     """
     generate the train/test data set
     split the data set according to split ratio

@@ -16,7 +16,7 @@ from .make_VGG import make_vgg
 WEIGHT_DECAY = 0.00001
 BATCH_SIZE = 128
 LEARNING_RATE = 0.0003
-EPOCH = 250
+EPOCH = 110
 
 class SiameseNetwork(nn.Module):
     def __init__(self, train=True):
@@ -39,11 +39,11 @@ class SiameseNetwork(nn.Module):
 
 
         self.out = torch.nn.Sequential(
-            # nn.Dropout(0.25),
+            nn.Dropout(0.25),
             nn.LeakyReLU(),
             nn.Linear(256, 128),
             nn.LeakyReLU(),
-            nn.Linear(128, 32),
+            nn.Linear(128, 64),
         )
 
         self._initialize_weights()

@@ -258,9 +258,6 @@ def wavelet_trans(data):
 
     # 转换为 时序-通道 追加一个零点在转换回 通道-时序
     data = pywt.threshold(data, 15, 'hard')  # 再次阈值滤波
-    normalize_scaler.fit(data)
-    data = normalize_scaler.transform(data)
-    data = eliminate_zero_shift(data)  # 消除零点漂移
     data = np.abs(data)  # 反转
     return data  # 转换为 时序-通道 便于rnn输入
 
@@ -359,22 +356,25 @@ def expand_emg_data_single(data):
     return expanded_data
 
 # data scaling
+
+"""
+maxmin scale = (val - min) / (max - min) 
+即数据在最大值最小值直接的比例
+scale值阈值的设置是根据 scikit MinMax的的处理方法
+scale数组中实际存储的是最大值减最小值的倒数  值越大 说明数据波动越小
+如果scale时最大最小值相差很小 则不进行min max 的缩放scale 避免放大噪声
+min 数组中存的是最小值 乘以scale 数组的值 相当于数据基准偏移量
+数据一般都有一个小偏移量 所以数据最好都进行一下偏移修正
+在不进行scale时 偏移量应还原成数据自身的偏移量 所以做之前乘法的逆运算 获取原始偏移量
+"""
+
 class DataScaler:
     """
     全局归一化scaler
     每次在生成训练数据时 根据所有数据生成一个这样的全局scaler
     在特征提取完成后 使用其进行scaling
     目前有的类型：
-    'rnn',
-        'rnn_acc',
-            'rnn_acc_rms',
-            'rnn_acc_zc',
-            'rnn_acc_arc'
-        'rnn_gyr',
-            'rnn_gyr_rms',
-            'rnn_gyr_zc',
-            'rnn_gyr_arc'
-        'rnn_emg',  肌电信号可有可无
+
     'cnn',
         'cnn_acc',
         'cnn_gyr',
@@ -386,7 +386,10 @@ class DataScaler:
         :param scale_data_path: 放有scale数据文件的路径 加载scale向量
         """
         self.scale_data_path = os.path.join(scale_data_path, 'scale_data')
-        self.scaler = preprocessing.MinMaxScaler()
+        self.scaler = {
+            'minmax': preprocessing.MinMaxScaler(),
+            # 'robust': preprocessing.RobustScaler()
+        }
         self.scale_datas = {}
         try:
             file_ = open(self.scale_data_path, 'rb')
@@ -397,44 +400,71 @@ class DataScaler:
             print("cant load scale data, please generated before use")
             return
 
-    def normalize(self, data, type_name):
+    def normalize(self, data, scale_type, data_type=None):
         """
-        对数据进行归一化
-        :param data: 数据
-        :param type_name: 数据对应scale vector的类型
-        :return: 归一化后的数据
+        start normalize
+        :param data: input
+        :param scale_type: the scale method
+        :param data_type:
+        :return:
         """
         # 在元组中保存scale使用的min 和scale数据
-        self.scaler.min_ = self.scale_datas[type_name][0]
-        self.scaler.scale_ = self.scale_datas[type_name][1]
-        return self.scaler.transform(data)
+        if data_type is not  None:
+            type_name = scale_type + '_' + data_type
+        else:
+            type_name = scale_type
 
-    def generate_scale_data(self, data, type_name):
+        if scale_type == 'minmax':
+            self.scaler[scale_type].min_ = self.scale_datas[type_name][0]
+            self.scaler[scale_type].scale_ = self.scale_datas[type_name][1]
+            data = self.scaler[scale_type].transform(data)
+            data = np.where(data < 0, 0, data)
+            return np.log(1.7*data+1)
+        elif scale_type == 'robust':
+            self.scaler[scale_type].center_ = self.scale_datas[type_name][0]
+            self.scaler[scale_type].scale_ = self.scale_datas[type_name][1]
+            return self.scaler[scale_type].transform(data)
+
+
+    def generate_scale_data(self, data):
         """
         根据全局的数据生成scale vector
         :param data: 全局数据
         :param type_name:  数据的类型
         """
-        self.scaler.fit(data)
-        self.scale_datas[type_name] = (self.scaler.min_, self.scaler.scale_)
+        for each in self.scaler.keys():
+            if each == 'minmax':
+                data_range = 1.0
+                max_ = np.percentile(data, 99.995, axis=0)
+                min_ = np.percentile(data, 0.005, axis=0)
+                min_ = np.where(abs(min_) < 0.00000001, 0, min_)
 
-    def split_scale_vector(self, scale_name, vector_names, vector_range):
+                print('max: \n' + str(max_))
+                print('min: \n' + str(min_))
+                scale_ = data_range / _handle_zeros_in_scale(max_ - min_)
+                min_ = 0 - min_ * scale_
+                self.scale_datas[each] = (min_, scale_)
+            elif each == 'robust':
+                self.scale_datas[each] = (self.scaler[each].scale_, self.scaler[each].scale_)
+
+    def split_scale_vector(self, vector_names, vector_range):
         """
         拆分scale vactor  生成是将模型各个特征输入拼接到一起生成的vector
         为了便于使用， 将不同特征的数据拆开
-        :param scale_name: 被拆开的scale
         :param vector_names: 拆分后各个scale 的名字
         :param vector_range: 各个子scale对于原scale的范围
         """
         if len(vector_names) != len(vector_range):
             raise ValueError("names and ranges doesn't match")
-        target_scale = self.scale_datas[scale_name]
-        min_ = target_scale[0]
-        scale_ = target_scale[1]
-        for each in range(len(vector_names)):
-            range_ = vector_range[each]
-            self.scale_datas[vector_names[each]] = (min_[range_[0]: range_[1]],
-                                                    scale_[range_[0]: range_[1]])
+        for scale_name in self.scaler.keys():
+            target_scale = self.scale_datas[scale_name]
+            min_ = target_scale[0]
+            scale_ = target_scale[1]
+            for each in range(len(vector_names)):
+                scale_data_name = '%s_%s' % (scale_name, vector_names[each])
+                range_ = vector_range[each]
+                self.scale_datas[scale_data_name] = (min_[range_[0]: range_[1]],
+                                                        scale_[range_[0]: range_[1]])
 
     def store_scale_data(self):
         """
@@ -444,58 +474,23 @@ class DataScaler:
         pickle.dump(self.scale_datas, file_, protocol=2)
         file_.close()
 
-    def expand_scale_data(self):
-        """
-        将scale按照特征进行拆分
-        :return:
-        """
-        cap_types = ['acc', 'gyr']
-        feat_names = ['rms', 'zc', 'arc']
-        for each_cap_type in cap_types:
-            parent_feat_names = "%s_%s" % ('rnn', each_cap_type)
-            child_feat_names = []
-            for each_feat in feat_names:
-                child_feat_names.append("%s_%s_%s" % ('rnn', each_cap_type, each_feat))
-            divid = [(0, 3), (3, 6), (6, 11)]
-            self.split_scale_vector(parent_feat_names, child_feat_names, divid)
 
 
+def _handle_zeros_in_scale(scale, copy=True):
+    ''' Makes sure that whenever scale is zero, we handle it correctly.
 
-normalize_scaler = preprocessing.MinMaxScaler()
-normalize_scale_collect = []
+    This happens in most scalers when we have constant features.'''
 
-def normalize(data, threshold, default_scale):
-    normalize_scaler.fit(data)
-    scale_adjust(threshold, default_scale)
-    return normalize_scaler.transform(data)
+    # if we are fitting on 1D arrays, scale might be a scalar
+    if np.isscalar(scale):
+        if scale == .0:
+            scale = 1.
+        return scale
+    elif isinstance(scale, np.ndarray):
+        if copy:
+            # New array to avoid side-effects
+            scale = scale.copy()
+        scale[scale == 0.0] = 1.0
+        return scale
 
-"""
-maxmin scale = (val - min) / (max - min) 
-即数据在最大值最小值直接的比例
-scale值阈值的设置是根据 scikit MinMax的的处理方法
-scale数组中实际存储的是最大值减最小值的倒数  值越大 说明数据波动越小
-如果scale时最大最小值相差很小 则不进行min max 的缩放scale 避免放大噪声
-min 数组中存的是最小值 乘以scale 数组的值 相当于数据基准偏移量
-数据一般都有一个小偏移量 所以数据最好都进行一下偏移修正
-在不进行scale时 偏移量应还原成数据自身的偏移量 所以做之前乘法的逆运算 获取原始偏移量
-
-"""
-
-def scale_adjust(threshold, default_scale):
-    """
-    根据scale的情况判断是否需要进行scale
-    scale的大小是由这个数据的max - min的得出 如果相差不大 就不进行scale
-    通过修改scale和min的值使其失去scale的作用
-    @:parameter threshold 过滤阈值 当最大最小值之差小于这个阈值 不进行归一化
-    note: scale 的大小是max - min 的倒数
-    """
-    threshold = 1 / threshold
-    default_scale = 1 / default_scale
-    curr_scale = normalize_scaler.scale_
-    curr_min = normalize_scaler.min_
-    for each_val in range(len(curr_scale)):
-        if curr_scale[each_val] > threshold:
-            # 当最大最小值不满足一般数据规律时 设置为默认归一化的scale
-            curr_min[each_val] = curr_min[each_val] * default_scale / curr_scale[each_val]
-            curr_scale[each_val] = default_scale
 
