@@ -110,6 +110,98 @@ class CNN(nn.Module):
 
 
 
+class HybridModel(nn.Module):
+    def __init__(self):
+        super(HybridModel, self).__init__()
+        self.cnn_part = make_vgg(input_chnl=6, layers=[2, 3], layers_chnl=[32, 64])
+        self.rnn_part = nn.LSTM(input_size=8,
+                                hidden_size=16,
+                                num_layers=6,
+                                batch_first=True,
+                                dropout=0.3)
+
+        self.cnn_decomp = nn.Sequential(
+            nn.LeakyReLU(),
+            nn.Linear(64*2, 64),
+            nn.LeakyReLU(),
+            nn.Linear(64, 32),
+        )
+
+        self.mlp_out = nn.Sequential(
+            nn.LeakyReLU(),
+            nn.Linear(32+16, 69)
+        )
+
+
+
+    def forward(self, *x):
+        cnn_x = x[0]
+        rnn_x = x[1]
+        cnn_out = self.cnn_part(cnn_x)
+        cnn_out = self.cnn_decomp(cnn_out)
+
+        rnn_out, h_n = self.rnn_part(rnn_x)
+        rnn_out = rnn_out[:, -1, :]
+        total_out = torch.cat((cnn_out, rnn_out), dim=1)
+
+        return self.mlp_out(total_out)
+
+    def exc_train(self):
+        # only import train staff in training env
+        from train_util.data_set import generate_data_set, HybridModelDataset
+        from train_util.common_train import train
+        print("CNN classify model start training")
+        print(str(self))
+
+        optimizer = torch.optim.Adam(self.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
+        loss_func = nn.CrossEntropyLoss()
+        lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.1)
+        data_set =generate_data_set(0.06, HybridModelDataset)
+        data_loader = {
+            'train': DataLoader.DataLoader(data_set['train'],
+                                           shuffle=True,
+                                           batch_size=BATCH_SIZE,
+                                           num_workers=1),
+            'test': DataLoader.DataLoader(data_set['test'],
+                                          shuffle=True,
+                                          batch_size=1,
+                                          num_workers=1)
+        }
+        train(model=self,
+              model_name='hybrid',
+              EPOCH=EPOCH,
+              optimizer=optimizer,
+              exp_lr_scheduler=lr_scheduler,
+              loss_func=loss_func,
+              save_dir='./params',
+              data_set=data_set,
+              data_loader=data_loader,
+              test_result_output_func=test_result_output,
+              cuda_mode = 1,
+              print_inter=2,
+              val_inter=30,
+              scheduler_step_inter=50
+              )
+
+    def load_params(self, path):
+        file_list = os.listdir(path)
+        target = None
+        for each in file_list:
+            if each.startswith("hybrid") and each.endswith('.pkl'):
+                target = each
+                break
+        if target is None:
+            raise Exception("can't find satisfy model params")
+        target = os.path.join(path, target)
+        print(target)
+        self.load_state_dict(torch.load(target))
+
+
+
+
+
+
+
 def test_result_output(result_list, epoch, loss):
     test_result = {}
     all_t_cnt = 0

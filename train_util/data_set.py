@@ -142,6 +142,19 @@ class TripletLossDataSet(torch.utils.data.Dataset):
                 self.data_dict[each_label].append(each_data)
 
 
+class HybridModelDataset:
+    def __init__(self, data_set):
+        self.data_set = data_set
+
+    def __len__(self):
+        return len(self.data_set)
+
+    def __getitem__(self, item):
+        item = self.data_set[item]
+        data_mat = torch.from_numpy(item[0]).float()
+        emg_data_mat = torch.from_numpy(item[1]).float()
+        label = torch.from_numpy(np.array(item[2], dtype=int))
+        return [data_mat, emg_data_mat], label
 
 def generate_data_set(split_ratio, data_set_type, batch_k=16):
     """
@@ -164,10 +177,14 @@ def generate_data_set(split_ratio, data_set_type, batch_k=16):
     print('data set size %d' % len(data_set))
     random.shuffle(data_set)
     for each in range(len(data_set)):
-        data_mat = data_set[each][0].T
-        data_mat = np.where(data_mat > 0.00000000001, data_mat, 0)
-        data_set[each] = (data_mat,
-                          data_set[each][1] )
+        if data_set_type == HybridModelDataset:
+            data_set[each] = (data_set[each][0].T,
+                              data_set[each][1].T,
+                              data_set[each][2])
+        else:
+            data_set[each] = (data_set[each][0].T,
+                              data_set[each][1])
+
     train_data = data_set[int(len(data_set)*split_ratio) :]
     test_data = data_set[: int(len(data_set)*split_ratio)]
 

@@ -97,9 +97,13 @@ def train(model: nn.Module,
                     loss = loss_func(batch_out, batch_y)
                 else:
                     batch_out = model(*batch_x)
-                    batch_y = batch_y.float()
-
-                    loss = loss_func(batch_out[0], batch_out[1], batch_y)
+                    if model_name.startswith('verify'):
+                        batch_y = batch_y.float()
+                        loss = loss_func(batch_out[0], batch_out[1], batch_y)
+                    else:
+                        # print(batch_out)
+                        # print(batch_y)
+                        loss = loss_func(batch_out, batch_y)
 
                 loss_his.append(loss.item())
                 optimizer.zero_grad()
@@ -134,7 +138,7 @@ def train(model: nn.Module,
 
                     # only classify mode need max index
 
-                    if model_name.startswith("cnn"):
+                    if not model_name.startswith("verify"):
                         test_output = get_max_index(test_output)
                         test_output = test_output.item()
 

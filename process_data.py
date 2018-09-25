@@ -38,14 +38,7 @@ def feature_extract(data_set, type_name):
             仍保持多次采集的数据的np.array放在一个list中
             返回的数据的dict包含所有的数据 但是只有有效的字段有数据
     """
-    global normalize_scale_collect
-    normalize_scale_collect = []
-    global standardize_scale_collect
-    standardize_scale_collect = []
 
-    data_set_rms_feat = []
-    data_set_zc_feat = []
-    data_set_arc_feat = []
     data_set_polyfit_feat = []  # for cnn 使用多项式对间隔间的数据进行拟合 减少中间数据点
     data_set_appended_feat = []
 
@@ -54,17 +47,7 @@ def feature_extract(data_set, type_name):
         if raw_data % 100 == 0:
             print("extraction progress %d / %d" % (raw_data, len(data_set)))
         raw_data = data_set[raw_data]
-        # 一般的特征提取过程
-        # rms zc arc polyfit all
-        # seg_RMS_feat, seg_ZC_feat, seg_ARC_feat, seg_polyfit_data, seg_all_feat \
-        #     = feature_extract_single(raw_data, type_name)
-        # rnn sector
-        # data_set_arc_feat.append(seg_ARC_feat)
-        # data_set_rms_feat.append(seg_RMS_feat)
-        # data_set_zc_feat.append(seg_ZC_feat)
-        # data_set_appended_feat.append(seg_all_feat)
 
-        # cnn sector
         # cnn的特征提取过程 只使用曲线拟合特征
         seg_polyfit_feat = feature_extract_single_polyfit(raw_data, 2)
         # 多项式拟合后切割
@@ -76,10 +59,6 @@ def feature_extract(data_set, type_name):
     return {
         'type_name': type_name,
         'raw': data_set,
-        'arc': data_set_arc_feat,
-        'rms': data_set_rms_feat,
-        'zc': data_set_zc_feat,
-
         'poly_fit': data_set_polyfit_feat,  # cnn 3 x 64 数据
         'append_all': data_set_appended_feat  # rnn 11 x 10 数据
     }
@@ -176,17 +155,14 @@ def feature_extract_single(input_data, type_name):
     # rms zc arc polyfit all
     return tuple(features)
 
-def ARC(Win_Data):
-    Len_Data = len(Win_Data)
-    # AR_coefficient = []
-    AR_coefficient = np.polyfit(range(Len_Data), Win_Data, 3)
-    return AR_coefficient
 
-def append_feature_vector(data_set):
+
+def append_feature_vector(data_set, with_emg=False):
     """
     拼接三种数据采集类型的特征数据成一个大向量
     :param data_set: 第一维存储三种采集类型数据集的list
                      第二维是这个类型数据三种特征拼接后 每次采集获得的数据矩阵
+    :param with_emg: 是否将emg也拼接进入向量
     :return:
     """
 
@@ -194,20 +170,26 @@ def append_feature_vector(data_set):
     # 每种采集类型下有多个数据
     for i in range(len(data_set[0])):
         # 取出每个采集类型的数据列中的每个数据进行拼接
-        batch_mat = append_single_data_feature(acc_data=data_set[0][i],
-                                               gyr_data=data_set[1][i],
-                                               emg_data=data_set[2][i], )
+        if with_emg:
+            batch_mat = append_single_data_feature(acc_data=data_set[0][i],
+                                                   gyr_data=data_set[1][i],
+                                                   emg_data=data_set[2][i], )
+        else:
+            batch_mat = append_single_data_feature(acc_data=data_set[0][i],
+                                                   gyr_data=data_set[1][i],)
+
         batch_list.append(batch_mat)
     return batch_list
 
-def append_single_data_feature(acc_data, gyr_data, emg_data):
+def append_single_data_feature(acc_data, gyr_data, emg_data=None):
     batch_mat = np.zeros(len(acc_data))
     is_first = True
     for each_window in range(len(acc_data)):
         # 针对每个识别window
         # 把这一次采集的三种数据采集类型进行拼接
         line = np.append(acc_data[each_window], gyr_data[each_window])
-        line = np.append(line, emg_data[each_window])
+        if emg_data is not None:
+            line = np.append(line, emg_data[each_window])
         if is_first:
             is_first = False
             batch_mat = line
@@ -217,27 +199,23 @@ def append_single_data_feature(acc_data, gyr_data, emg_data):
 
 # emg data_process
 
-def emg_feature_extract(data_set, for_cnn):
+def emg_feature_extract(data_set, expanded):
     """
     特征提取
     :param data_set: 来自Load_From_File过程的返回值 一个dict
                      包含一个手语 三种采集数据类型的 多次采集过程的数据
+    :param expanded: 是否进行上采样，将其变为与acc gyr数据同样长度
     :return: 一个dict 包含这个数据采集类型的原始数据,3种特征提取后的数据,特征拼接后的特征向量
             仍保持多次采集的数据放在一起
     """
-    if for_cnn:
-        data_set = [each[16:144, :] for each in data_set['emg']]
-    else:
-        data_set = data_set['emg']
-
+    data_set = [each[16:144, :] for each in data_set['emg']]
     data_trans = emg_wave_trans(data_set)
-    if for_cnn:
+    if expanded:
         data_trans = expand_emg_data(data_trans)
     return {
         'type_name': 'emg',
         'raw': data_set,
         'trans': data_trans,
-        'append_all': data_trans,
     }
 
 def wavelet_trans(data):
@@ -409,10 +387,10 @@ class DataScaler:
         :return:
         """
         # 在元组中保存scale使用的min 和scale数据
-        if data_type is not  None:
+        if data_type is not None:
             type_name = scale_type + '_' + data_type
         else:
-            type_name = scale_type
+            type_name = scale_type + '_all'
 
         if scale_type == 'minmax':
             self.scaler[scale_type].min_ = self.scale_datas[type_name][0]
@@ -426,45 +404,46 @@ class DataScaler:
             return self.scaler[scale_type].transform(data)
 
 
-    def generate_scale_data(self, data):
+    def generate_scale_data(self, data, scale_type, data_type):
         """
         根据全局的数据生成scale vector
         :param data: 全局数据
-        :param type_name:  数据的类型
+        :param scale_type: 归一化方式 e.g. MinMax
+        :param data_type: 数据类型  acc emg gyr all
+        :return:
         """
-        for each in self.scaler.keys():
-            if each == 'minmax':
-                data_range = 1.0
-                max_ = np.percentile(data, 99.995, axis=0)
-                min_ = np.percentile(data, 0.005, axis=0)
-                min_ = np.where(abs(min_) < 0.00000001, 0, min_)
+        scale_data_name = '%s_%s' % (scale_type, data_type)
+        if scale_type == 'minmax':
+            data_range = 1.0
+            max_ = np.percentile(data, 99.995, axis=0)
+            min_ = np.percentile(data, 0.005, axis=0)
+            min_ = np.where(abs(min_) < 0.00000001, 0, min_)
 
-                print('max: \n' + str(max_))
-                print('min: \n' + str(min_))
-                scale_ = data_range / _handle_zeros_in_scale(max_ - min_)
-                min_ = 0 - min_ * scale_
-                self.scale_datas[each] = (min_, scale_)
-            elif each == 'robust':
-                self.scale_datas[each] = (self.scaler[each].scale_, self.scaler[each].scale_)
+            print('max: \n' + str(max_))
+            print('min: \n' + str(min_))
+            scale_ = data_range / _handle_zeros_in_scale(max_ - min_)
+            min_ = 0 - min_ * scale_
+            self.scale_datas[scale_data_name] = (min_, scale_)
 
-    def split_scale_vector(self, vector_names, vector_range):
+
+    def split_scale_vector(self, scale_name, vector_names, vector_range):
         """
         拆分scale vactor  生成是将模型各个特征输入拼接到一起生成的vector
         为了便于使用， 将不同特征的数据拆开
+        :param scale_name: 待拆分的scale
         :param vector_names: 拆分后各个scale 的名字
         :param vector_range: 各个子scale对于原scale的范围
         """
         if len(vector_names) != len(vector_range):
             raise ValueError("names and ranges doesn't match")
-        for scale_name in self.scaler.keys():
-            target_scale = self.scale_datas[scale_name]
-            min_ = target_scale[0]
-            scale_ = target_scale[1]
-            for each in range(len(vector_names)):
-                scale_data_name = '%s_%s' % (scale_name, vector_names[each])
-                range_ = vector_range[each]
-                self.scale_datas[scale_data_name] = (min_[range_[0]: range_[1]],
-                                                        scale_[range_[0]: range_[1]])
+        target_scale = self.scale_datas[scale_name]
+        min_ = target_scale[0]
+        scale_ = target_scale[1]
+        for each in range(len(vector_names)):
+            scale_data_name = '%s_%s' % (scale_name, vector_names[each])
+            range_ = vector_range[each]
+            self.scale_datas[scale_data_name] = (min_[range_[0]: range_[1]],
+                                                    scale_[range_[0]: range_[1]])
 
     def store_scale_data(self):
         """
@@ -474,6 +453,8 @@ class DataScaler:
         pickle.dump(self.scale_datas, file_, protocol=2)
         file_.close()
 
+    def __str__(self):
+        return "curr scalers' type: \n\"%s\"" % str(self.scale_datas.keys())
 
 
 def _handle_zeros_in_scale(scale, copy=True):

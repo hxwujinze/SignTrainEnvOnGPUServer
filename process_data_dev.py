@@ -179,20 +179,38 @@ def cut_out_data(data):
             data[each_cap_type][each_data] = data[each_cap_type][each_data][16:144, :]
     return data
 
-def pickle_each_sign_data(data_set):
-    raw_data_set = data_set[0]
-    each_sign = data_set[1]
+def pickle_each_sign_data(args):
+    """
+    交由每个进程进行数据处理的过程
+    :param args: 三个参数
+        raw_data_set 为原始的数据集
+        each_sign 为手语类别的label
+        individual_emg bool，是否将emg单独处理。
+    :return: 不单独处理emg时 ：
+                [(data_mat, label), ...], overall_data_mat
+            单独处理emg
+                [(acc_gyr_data_mat, emg_data_mat, label), acc_gyr_overall_data_mat, emg_overall_data_mat]
+    """
+    raw_data_set = args[0]
+    each_sign = args[1]
+    individual_emg = args[2]
 
     print("process sign %d" % each_sign)
     extracted_data_set = []
     for each_cap_type in CAP_TYPE_LIST:
         print("extracting %s" % each_cap_type)
         if each_cap_type == 'emg':
-            extracted_data_set.append(process_data.emg_feature_extract(raw_data_set, True)['trans'])
+            extracted_data_set.append(
+                process_data.emg_feature_extract(raw_data_set, expanded=not individual_emg)['trans'])
         else:
             extracted_data_blocks = feature_extract(raw_data_set, each_cap_type)
             extracted_data_set.append(extracted_data_blocks['poly_fit'])
-    extracted_data_set = append_feature_vector(extracted_data_set)
+
+    # individual emg data
+    overall_data_mat_emg = None
+    extracted_emg_data_set = extracted_data_set[-1]
+    extracted_data_set = append_feature_vector(extracted_data_set, not individual_emg)
+
     # stack up for normalization
     overall_data_mat = None
     train_data_set = []
@@ -204,18 +222,42 @@ def pickle_each_sign_data(data_set):
         # save into train data  sign id start from 0
         train_data_set.append((each_mat, each_sign))
 
+    if individual_emg:
+        emg_train_data_set = []
+        for each_mat in extracted_emg_data_set:
+            if overall_data_mat_emg is None:
+                overall_data_mat_emg = each_mat
+            else:
+                overall_data_mat_emg = np.vstack((overall_data_mat_emg, each_mat))
+            emg_train_data_set.append(each_mat)
+        new_train_data_set = []
+        for each_mat in range(len(emg_train_data_set)):
+            new_train_data_set.append((train_data_set[each_mat][0],
+                                       emg_train_data_set[each_mat],
+                                       train_data_set[each_mat][1]))
+        return new_train_data_set, overall_data_mat, overall_data_mat_emg
+    else:
+        return train_data_set, overall_data_mat
 
-    return train_data_set, overall_data_mat
 
-def pickle_train_data_new():
+def pickle_train_data_new(individual_emg=True):
+    """
+    新的训练数据生成方法
+    :param individual_emg:  是否将emg数据单独分开？
+                由于小波变换会极大的缩短数据，为了能将emg和acc gyr拼接在一起，需要进行上采样，
+                使其长度与acc gyr的长度一致。单独处理后将进行上采样和拼接，直接返回小波变换后的数据
+    :return:
+    """
     with open(os.path.join(DATA_DIR_PATH, 'cleaned_data.dat'), 'r+b') as f:
         data_set = pickle.load(f)
 
     train_data_set = []
     overall_data_mat = None
+    emg_overall_data_mat = None
+
     arg_list = []
     for each_sign in range(len(GESTURES_TABLE)):
-        arg_list.append((data_set[each_sign], each_sign))
+        arg_list.append((data_set[each_sign], each_sign, individual_emg))
 
     p = Pool(25)
     res = p.map(pickle_each_sign_data, arg_list)
@@ -223,6 +265,8 @@ def pickle_train_data_new():
 
     for each_res in res :
         train_data_set.extend(each_res[0])
+
+
         if overall_data_mat is None:
             overall_data_mat = each_res[1]
         else:
@@ -230,9 +274,28 @@ def pickle_train_data_new():
                 overall_data_mat = np.vstack((overall_data_mat, each_res[1]))
             except ValueError:
                 print(each_res[1])
-
-    print(overall_data_mat.shape)
+        if individual_emg:
+            if emg_overall_data_mat is None:
+                emg_overall_data_mat = each_res[2]
+            else:
+                try:
+                   emg_overall_data_mat = np.vstack((emg_overall_data_mat, each_res[2]))
+                except ValueError:
+                    print(each_res[2])
+    if individual_emg:
+        print("emg_overall_data_mat %s" % str(emg_overall_data_mat.shape))
+    print("overall_data_mat %s" % str(overall_data_mat.shape))
     print(len(train_data_set))
+
+    if individual_emg:
+        overall_data_mat = {
+            'accgyr': overall_data_mat,
+            'emg': emg_overall_data_mat,
+        }
+    else:
+        overall_data_mat = {
+            'all': overall_data_mat
+        }
 
     with open(os.path.join(DATA_DIR_PATH, 'overall_data_mat'), 'w+b') as f:
         pickle.dump(overall_data_mat, f)
@@ -241,10 +304,19 @@ def pickle_train_data_new():
 
     normed_data = []
     for each in train_data_set:
-        data_mat = scaler.normalize(each[0], 'minmax')
-        data_mat = np.where(abs(data_mat) < 0.0000001, 0, data_mat)
-        normed_data.append((data_mat, each[1]))
+        if individual_emg:
+            accgyr_mat = scaler.normalize(each[0], 'minmax', 'accgyr')
+            accgyr_mat = np.where(abs(accgyr_mat) <0.00000001, 0, abs(accgyr_mat))
+            emg_mat = scaler.normalize(each[1], 'minmax', 'emg')
+            emg_mat = np.where(abs(emg_mat) < 0.00000001, 0, abs(emg_mat) )
+
+            normed_data.append((accgyr_mat, emg_mat, each[2]))
+        else:
+            data_mat = scaler.normalize(each[0], 'minmax')
+            data_mat = np.where(abs(data_mat) < 0.0000001, 0, data_mat)
+            normed_data.append((data_mat, each[1]))
     train_data_set = normed_data
+    print(train_data_set[0])
 
 
     with open(os.path.join(DATA_DIR_PATH, 'new_train_data'), 'w+b') as f:
@@ -256,15 +328,23 @@ def init_scaler(overall_data_mat=None):
     if overall_data_mat is None:
         with open(os.path.join(DATA_DIR_PATH, 'overall_data_mat'), 'r+b') as f:
             overall_data_mat = pickle.load(f)
-    print(overall_data_mat.shape)
+    print('overall_data_mat :%s' % str(overall_data_mat.keys()))
     scaler = process_data.DataScaler(DATA_DIR_PATH)
 
-    scaler.generate_scale_data(overall_data_mat)
-    vectors_name = ['acc', 'gyr', 'emg']
-    vectors_range = ((0, 3), (3, 6), (6, 14))
-    scaler.split_scale_vector(vectors_name, vectors_range)
+    for each_dtpye in overall_data_mat.keys():
+        scaler.generate_scale_data(overall_data_mat[each_dtpye], 'minmax', each_dtpye)
 
-    # scaler.expand_scale_data()
+    print(str(scaler))
+
+    if 'all' in overall_data_mat.keys():
+        vectors_name = ['acc', 'gyr', 'emg']
+        vectors_range = ((0, 3), (3, 6), (6, 14))
+        scaler.split_scale_vector("minmax_all", vectors_name, vectors_range)
+    else:
+        vectors_name = ['acc', 'gyr']
+        vectors_range = ((0, 3), (3, 6))
+        scaler.split_scale_vector("minmax_accgyr", vectors_name, vectors_range)
+
     scaler.store_scale_data()
 
     return scaler
@@ -1038,7 +1118,7 @@ def main():
 
     # 将采集数据转换为输入训练程序的数据格式
     # pickle_train_data(batch_num=87)
-    pickle_train_data_new()
+    pickle_train_data_new(True)
     # init_scaler()
 
     # 生成验证模型的参照系向量
