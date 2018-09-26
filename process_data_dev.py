@@ -1118,7 +1118,7 @@ def main():
 
     # 将采集数据转换为输入训练程序的数据格式
     # pickle_train_data(batch_num=87)
-    pickle_train_data_new(True)
+    pickle_train_data_new(False)
     # init_scaler()
 
     # 生成验证模型的参照系向量

@@ -113,25 +113,19 @@ class CNN(nn.Module):
 class HybridModel(nn.Module):
     def __init__(self):
         super(HybridModel, self).__init__()
-        self.cnn_part = make_vgg(input_chnl=6, layers=[2, 3], layers_chnl=[32, 64])
-        self.rnn_part = nn.LSTM(input_size=8,
+        self.cnn_part = make_vgg(input_chnl=6, layers=[2, 3], layers_chnl=[64, 128])
+        self.rnn_part = nn.GRU(input_size=8,
                                 hidden_size=16,
-                                num_layers=6,
+                                num_layers=5,
                                 batch_first=True,
                                 dropout=0.3)
 
         self.cnn_decomp = nn.Sequential(
             nn.LeakyReLU(),
-            nn.Linear(64*2, 64),
+            nn.Linear(128*2, 128),
             nn.LeakyReLU(),
-            nn.Linear(64, 32),
+            nn.Linear(128, 32),
         )
-
-        self.mlp_out = nn.Sequential(
-            nn.LeakyReLU(),
-            nn.Linear(32+16, 69)
-        )
-
 
 
     def forward(self, *x):
@@ -144,7 +138,30 @@ class HybridModel(nn.Module):
         rnn_out = rnn_out[:, -1, :]
         total_out = torch.cat((cnn_out, rnn_out), dim=1)
 
-        return self.mlp_out(total_out)
+        return total_out
+
+
+
+
+
+
+class HybridClassifyModel(nn.Module):
+    def __init__(self):
+        super(HybridClassifyModel, self).__init__()
+        self.encode = HybridModel()
+        self.mlp_out = nn.Sequential(
+            nn.LeakyReLU(),
+            nn.Linear(32+16, 69)
+        )
+
+
+
+    def forward(self, *x):
+        cnn_in = x[0]
+        rnn_in = x[1]
+        feats = self.encode(cnn_in, rnn_in)
+        return self.mlp_out(feats)
+
 
     def exc_train(self):
         # only import train staff in training env
@@ -195,10 +212,6 @@ class HybridModel(nn.Module):
         target = os.path.join(path, target)
         print(target)
         self.load_state_dict(torch.load(target))
-
-
-
-
 
 
 

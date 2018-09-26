@@ -170,7 +170,10 @@ def generate_data_set(split_ratio, data_set_type, batch_k=16):
         'test': test DataSet
     }
     """
-    data_path = os.path.join(DATA_DIR_PATH, 'new_train_data')
+    data_set_name = 'new_train_data'
+    if data_set_type == HybridModelDataset:
+        data_set_name += '_hybrid'
+    data_path = os.path.join(DATA_DIR_PATH, data_set_name)
     with open(data_path, 'r+b') as f:
         data_set = pickle.load(f)
         
