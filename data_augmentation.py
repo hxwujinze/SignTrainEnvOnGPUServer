@@ -44,7 +44,7 @@ data format:
     
 """
 
-def load_train_data(sign_id, date, batch_range):
+def load_train_data(sign_id, date, data_dir, batch_range):
     """
     load dedicate date captured data
     format as {
@@ -59,14 +59,16 @@ def load_train_data(sign_id, date, batch_range):
     }
     :param sign_id: which sigh gonna load
     :param date: capture date
+    :param data_dir: where to load
     :param batch_range: the range of batch of this data
     :return: if doesn't find the target sign data, will return None
     """
     overall_data = None
     for each_date in date:
-        data_path = os.path.join('cleaned_data', each_date)
+        data_path = os.path.join(data_dir, each_date)
         for batch in batch_range:
             batch = int(batch)
+            # print(data_path)
             curr_batch_data = process_data_dev.load_train_data(sign_id, batch, data_path, verbose=False)
             if len(curr_batch_data['acc']) == 0:
                 continue
@@ -306,13 +308,14 @@ from multiprocessing import Pool
 
 
 def load_and_clean_data(each_sign):
-    # print('cleaning sign: %d' % each_sign)
+
     date_list = each_sign[1]
     each_sign = each_sign[0]+ 1
-
+    # print('cleaning sign: %d' % each_sign)
     data = load_train_data(sign_id=each_sign,
                            date=date_list,
-                           batch_range=range(1, 299))
+                           batch_range=range(1, 699),
+                           data_dir='resort_data')
     sign_cnt = 0
     sign_cnt_cleaned = 0
     cleaned_data = {
@@ -333,12 +336,12 @@ def load_and_clean_data(each_sign):
 
 def clean_all_data(date_list=None):
     if date_list is None:
-        date_list = os.listdir(os.path.join(DATA_DIR_PATH, 'cleaned_data'))
+        date_list = os.listdir(os.path.join(DATA_DIR_PATH, 'resort_data'))
     print(date_list)
     arg_list = []
     for each_sign in range(len(GESTURES_TABLE)):
         arg_list.append((each_sign, date_list))
-    p = Pool(10)
+    p = Pool(25)
     res = p.map(load_and_clean_data, arg_list)
 
     sign_cnt = []
@@ -371,7 +374,9 @@ def load_data(sign_id, date_list=None):
         date_list = os.listdir(os.path.join(DATA_DIR_PATH, 'resort_data'))
     # date_list = ['0811-2']
     # date_list.remove('0812-1')
-    data = load_train_data(sign_id=sign_id, date=date_list, batch_range=range(1, 99))
+    data = load_train_data(sign_id=sign_id,
+                           date=date_list,
+                           batch_range=range(1, 99))
     return data
 
 def show_data_distribution(sign_id):
@@ -396,10 +401,10 @@ def main():
     pass
     # read_gesture_table()
     # 存在离群点密集 batch 20    25
-    data_distribution_statistics(True)
-    # clean_all_data()
+    # data_distribution_statistics(True)
+    clean_all_data()
     #clean_data_test(28)
-    show_data_distribution(13)
+    # show_data_distribution(13)
     # clean_data_test(58)
     #data = load_data(sign_id=28)
     #draw_box_plt(data)

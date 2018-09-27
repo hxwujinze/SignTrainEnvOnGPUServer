@@ -1101,7 +1101,7 @@ def main():
     # data_set = load_feed_back_data()[sign_id]
 
     # resort_data(['0816-*',])
-    # statistics_data('cleaned_data')
+    statistics_data('resort_data')
 
 
     # print_train_data(sign_id=1,

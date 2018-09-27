@@ -13,7 +13,6 @@ from .make_VGG import make_vgg
 # Lout=floor((Lin+2∗padding−dilation∗(kernel_size−1)−1)/stride+1)
 
 
-nn.LSTM
 
 WEIGHT_DECAY = 0.00001
 BATCH_SIZE = 128

@@ -6,8 +6,8 @@ import torch
 
 if __name__ == "__main__":
 
-    m = cm.HybridClassifyModel()
-    # m = CNN_model.CNN()
+    # m = cm.HybridClassifyModel()
+    m = cm.CNN()
     m.exc_train()
-    # m = SN.SiameseNetwork(True)
-    # m.exc_train()
+    m = SN.SiameseNetwork(True)
+    m.exc_train()
